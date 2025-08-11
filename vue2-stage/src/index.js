@@ -1,11 +1,10 @@
-import {initMixin} from "./init"
+import { initMixin } from "./init";
 
-Vue.prototype.xx = function (options){
+function Vue(options) {
   // options 就是用户的选项
-  this._init(options)
+  this._init(options);
 }
 
-
-initMixin(Vue)
+initMixin(Vue);
 
 export default Vue;

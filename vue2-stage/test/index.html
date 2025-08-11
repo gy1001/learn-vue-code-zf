@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+        name="viewport">
+  <meta content="ie=edge" http-equiv="X-UA-Compatible">
   <title>Document</title>
 </head>
 <body>
@@ -17,8 +17,18 @@
   const vm = new Vue({
     data: { // 代理数据
       name: '珠峰',
-      age:  20
+      age: 20,
+      address: {
+        content: '天通苑',
+        number: 30
+      }
     }
   })
+  console.log(vm)
+  vm.name = "孙悟空"
+  console.log(vm.name)
+
+  vm.address.content = "回龙观"
+
 </script>
 </html>
