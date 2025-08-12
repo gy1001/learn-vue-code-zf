@@ -1,8 +1,29 @@
+import { newArrayProto } from "./array";
+
 class Observer {
   constructor(data) {
     // Object.defineProperty 只能劫持已经存在的属性，新增、删除的都无法
     // vue2中为此还专门写了一个api: $set $delete
-    this.walk(data);
+    // data.__ob__ = this; // 这里直接赋值会导致死循环，一直加__ob__
+    Object.defineProperty(data, "__ob__", {
+      value: this,
+      configurable: false, // 将 __ob__ 变为不可枚举
+    });
+    if (Array.isArray(data)) {
+      // 我们可以重写数组中的方法: 7个变异方法，它们可以修改原数组
+
+      data.__proto__ = newArrayProto; // 这里需要保留数组原有弹性，并且可以重写部分方法
+      // 数组中还有引用类型属性的数据：
+      this.observeArray(data);
+    } else {
+      this.walk(data);
+    }
+  }
+
+  observeArray(data) {
+    data.forEach((item) => {
+      observe(item);
+    });
   }
 
   walk(data) {
@@ -44,6 +65,8 @@ export function observe(data) {
   }
   // 如果一个对象被劫持过了，那就不需要在被劫持了
   // 要判断一个对象是否被劫持过，可以增加一个实例，用实例来判断是否被劫持过
-
+  if (data.__ob__ instanceof Observer) {
+    return data.__ob__;
+  }
   return new Observer(data);
 }

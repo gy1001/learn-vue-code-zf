@@ -21,7 +21,8 @@
       address: {
         content: '天通苑',
         number: 30
-      }
+      },
+      hobby: ['eat', 'drink', {a: 1}]
     }
   })
   console.log(vm)
@@ -30,5 +31,9 @@
 
   vm.address.content = "回龙观"
 
+  // 修改数组很少用索引，但是内部做劫持会浪费性能
+  // 用户一般修改数组，通常会使用数组的方法：push shift concat 等等
+  vm.hobby.unshift({b: 2})
+  console.log(vm)
 </script>
 </html>

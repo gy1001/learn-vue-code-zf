@@ -42,14 +42,70 @@
     }, _typeof(o);
   }
 
+  // 我们重写数组中的部分方法
+
+  var originArrayProto = Array.prototype; // 获取数组中的原型
+
+  // newArrayProto.__proto__ = originArrayProto
+  var newArrayProto = Object.create(originArrayProto);
+
+  // 找到所有的变异方法：会改变原数组
+  var arrayMethods = ["push", "pop", "shift", "unshift", "splice", "sort", "reverse"];
+  arrayMethods.forEach(function (method) {
+    // 这里重写数组的方法
+    newArrayProto[method] = function () {
+      var _originArrayProto$met;
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+      // 内部调用原来的方法，函数的劫持，切片编程
+      var result = (_originArrayProto$met = originArrayProto[method]).call.apply(_originArrayProto$met, [this].concat(args));
+      console.log("方法被调用了, method: ", method);
+      // 我们需要对新增的数据再次进行劫持
+      var inserted;
+      switch (method) {
+        case "push":
+        case "unshift":
+          inserted = args;
+          break;
+        case "splice":
+          inserted = args.slice(2);
+          break;
+      }
+      // 对插入的数据进行劫持
+      observe(inserted);
+      return result;
+    };
+  });
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
       // Object.defineProperty 只能劫持已经存在的属性，新增、删除的都无法
       // vue2中为此还专门写了一个api: $set $delete
-      this.walk(data);
+      // data.__ob__ = this; // 这里直接赋值会导致死循环，一直加__ob__
+      Object.defineProperty(data, "__ob__", {
+        value: this,
+        configurable: false // 将 __ob__ 变为不可枚举
+      });
+      if (Array.isArray(data)) {
+        // 我们可以重写数组中的方法: 7个变异方法，它们可以修改原数组
+
+        data.__proto__ = newArrayProto; // 这里需要保留数组原有弹性，并且可以重写部分方法
+        // 数组中还有引用类型属性的数据：
+        this.observeArray(data);
+      } else {
+        this.walk(data);
+      }
     }
     return _createClass(Observer, [{
+      key: "observeArray",
+      value: function observeArray(data) {
+        data.forEach(function (item) {
+          observe(item);
+        });
+      }
+    }, {
       key: "walk",
       value: function walk(data) {
         // 循环data对象，对属性依次进行劫持
@@ -90,7 +146,9 @@
     }
     // 如果一个对象被劫持过了，那就不需要在被劫持了
     // 要判断一个对象是否被劫持过，可以增加一个实例，用实例来判断是否被劫持过
-
+    if (data.__ob__ instanceof Observer) {
+      return data.__ob__;
+    }
     return new Observer(data);
   }
 
