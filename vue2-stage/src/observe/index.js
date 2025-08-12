@@ -29,6 +29,8 @@ export function defineReactive(target, key, value) {
       console.log("用户设置值了,key: ", key);
       // 修改的时候，会执行 set
       if (newValue !== value) {
+        // 如果设置的是对象，也要进行劫持响应化处理
+        observe(newValue);
         value = newValue;
       }
     },
