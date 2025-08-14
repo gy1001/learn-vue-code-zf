@@ -182,6 +182,13 @@
     });
   }
 
+  function compileToFunction(template) {
+    console.log(template);
+
+    // 1. 将 template 转换成 ast语法树木
+    // 2. 生成 render 方法，render方法的返回结果是虚拟DOM
+  }
+
   function initMixin(Vue) {
     // 就是给 vue 增加 init 方法的
     Vue.prototype._init = function (options) {
@@ -193,6 +200,38 @@
 
       // 初始化状态
       initState(vm);
+
+      //
+      if (options.el) {
+        vm.$mount(options.el); // 实现数据的挂在
+      }
+    };
+
+    // 挂载
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      el = document.querySelector(el);
+      var ops = vm.$options;
+      if (!ops.render) {
+        var template;
+        // 先进行查找是否有 render 函数，
+        // 没有 render 函数看一下是否写了 template 没有写 template 就用外部的 template
+        if (!ops.template && el) {
+          // 没有写模板，但是写了 el
+          template = el.outerHTML;
+        } else {
+          if (el) {
+            template = ops.template;
+          }
+        }
+        // console.log(template);
+        if (template) {
+          // 这里需要对模板进行编译
+          ops.render = compileToFunction(template); // jsx 最终也会被被编译成 h('xxx')
+        }
+      }
+      // 最终可以获取到 render 方法
+      console.log(ops.render);
     };
   }
 
