@@ -202,14 +202,57 @@
     // 2. 生成 render 方法，render方法的返回结果是虚拟DOM
   }
   function parseHtml(html) {
+    var ELEMENT_TYPE = 1;
+    var TEXT_TYPE = 3;
+    var stack = []; // 用于存放元素的
+    var currentParent; // 指向的是栈中的最后一个
+    var root; // 根节点
+
+    // 最终需要转换成一颗抽象语法树
+
+    function createAstElement(tag, attrs) {
+      return {
+        tag: tag,
+        type: ELEMENT_TYPE,
+        attrs: attrs,
+        children: [],
+        parent: null
+      };
+    }
     function start(tag, attrs) {
-      console.log("start", tag, attrs);
+      // 创造一个AST 节点
+      var node = createAstElement(tag, attrs);
+      if (!root) {
+        // 看一下是否是空树，如果为空则当前是树的根节点
+        root = node;
+      }
+      // 如果当前父节点有值
+      if (currentParent) {
+        node.parent = currentParent;
+        currentParent.children.push(node);
+      }
+      stack.push(node);
+      // currentParent 为栈中的最后一个
+      currentParent = node;
     }
     function end(tag) {
-      console.log("end", tag);
+      var node = stack.pop(); // 弹出最后一个， 校验标签是否合法
+      if (node.tag !== tag) {
+        console.log(tag, node);
+        console.error("标签开始和结束不一致");
+      }
+      currentParent = stack[stack.length - 1];
     }
     function chars(text) {
-      console.log("chars", text);
+      text = text.replace(/\s/g, ""); // 删除空格
+      if (text) {
+        // 把文本直接放到当前指向的节点中
+        currentParent.children.push({
+          type: TEXT_TYPE,
+          text: text,
+          parent: currentParent
+        });
+      }
     }
     function advance(n) {
       html = html.substring(n); // 返回该字符串从起始索引到结束索引（不包括）的部分
@@ -268,6 +311,7 @@
         }
       }
     }
+    console.log(root);
   }
 
   function initMixin(Vue) {
