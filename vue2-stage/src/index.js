@@ -1,4 +1,5 @@
 import { initMixin } from "./init";
+import { initLifeCycle } from "./lifecycle";
 
 function Vue(options) {
   // options 就是用户的选项
@@ -6,5 +7,6 @@ function Vue(options) {
 }
 
 initMixin(Vue);
+initLifeCycle(Vue);
 
 export default Vue;
