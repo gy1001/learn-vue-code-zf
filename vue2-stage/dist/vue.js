@@ -230,6 +230,7 @@
   var unicodeRegExp = /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD/;
   // unicodeRegExp.source 用于拿到正则表达式 unicodeRegExp 的字符串。
 
+  // attribute 匹配属性
   // 第一个分组就是属性的key value就是分组3分组4分组5
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z".concat(unicodeRegExp.source, "]*");
@@ -371,7 +372,7 @@
         });
         attr.value = obj;
       }
-      str += "".concat(attr.name, ": ").concat(JSON.stringify(attr.value), "',");
+      str += "".concat(attr.name, ": ").concat(JSON.stringify(attr.value), ",");
     };
     for (var i = 0, len = attrs.length; i < len; i++) {
       _loop();
@@ -420,14 +421,34 @@
   }
   function codegen(ast) {
     var children = genChildren(ast.children);
-    var code = "_c('".concat(ast.tag, "', ").concat(ast.attrs.length > 0 ? genProps(ast.attrs) : "null", " ").concat(ast.children.length ? ",".concat(children) : "", "})");
+    var code = "_c('".concat(ast.tag, "', ").concat(ast.attrs.length > 0 ? genProps(ast.attrs) : "null", ", ").concat(ast.children.length ? "".concat(children) : "", ")");
     return code;
   }
   function compileToFunction(template) {
     // 1. 将 template 转换成 ast语法树木
     var ast = parseHtml(template);
     // 2. 生成 render 方法，render方法的返回结果是虚拟DOM
-    console.log(codegen(ast));
+    var code = codegen(ast);
+    // 模板引擎的实现原理就是：with + new Function
+    code = "with(this){return ".concat(code, "}");
+    var render = new Function(code); // 根据代码生成 render 函数
+    return render;
+  }
+
+  function mountComponent(vm, el) {
+    vm.$el = el;
+    // 1. 调用 render 方法产生虚拟节点 虚拟 DOM
+    vm._update(vm._render()); // vm.$options.render() 虚拟节点
+    // 2. 根据虚拟 DOM 产生真是 DOM
+    // 3. 插入到 el 元素中
+  }
+  function initLifeCycle(Vue) {
+    Vue.prototype._update = function () {
+      console.log("_update");
+    };
+    Vue.prototype._render = function () {
+      console.log("_render");
+    };
   }
 
   function initMixin(Vue) {
@@ -472,15 +493,21 @@
         }
       }
       // 最终可以获取到 render 方法
-      console.log(ops.render);
+      // console.log(ops.render);
+      mountComponent(vm, el); // 组件的挂载
     };
   }
+
+  // script 标签使用的是 vue.global.js 这个编译过程是在浏览器中进行的
+  // runtime 是不包含模板编译的，整个编译打包的过程是通过 loader 来转义 .vue 文件的，
+  // 用runtime时候不能使用 template
 
   function Vue(options) {
     // options 就是用户的选项
     this._init(options);
   }
   initMixin(Vue);
+  initLifeCycle(Vue);
 
   return Vue;
 
