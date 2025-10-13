@@ -431,8 +431,37 @@
     var code = codegen(ast);
     // 模板引擎的实现原理就是：with + new Function
     code = "with(this){return ".concat(code, "}");
-    var render = new Function(code); // 根据代码生成 render 函数
-    return render;
+    return new Function(code); // 根据代码生成 render 函数
+  }
+
+  // 这个样子和ast一样吗？
+  // ast 做的是语法层面的转换，它描述的是语法本身（可以描述 js css html）
+  // 这里我们的虚拟 DOM 是描述的 DOM 元素，可以增加一些自定义属性(描述 dom 元素)
+  function vNode(vm, tag, key, data, children, text) {
+    return {
+      tag: tag,
+      data: data,
+      children: children,
+      text: text,
+      key: key
+    };
+  }
+
+  // h() _c()
+  function createElementVNode(vm, tag) {
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+    console.log("children", children);
+    var key = props === null || props === void 0 ? void 0 : props.key;
+    props === null || props === void 0 || delete props.key;
+    return vNode(vm, tag, key, props, children);
+  }
+
+  // _v()
+  function createTextVNode(vm, text) {
+    return vNode(vm, undefined, undefined, undefined, undefined, text);
   }
 
   function mountComponent(vm, el) {
@@ -443,12 +472,81 @@
     // 3. 插入到 el 元素中
   }
   function initLifeCycle(Vue) {
-    Vue.prototype._update = function () {
+    Vue.prototype._c = function () {
+      console.log("调用了 _c");
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+    Vue.prototype._v = function () {
+      console.log("调用了 _v");
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+    Vue.prototype._s = function (value) {
+      console.log("调用了 _s");
+      if (_typeof(value) !== "object") {
+        return value;
+      }
+      return JSON.stringify(value);
+    };
+    Vue.prototype._update = function (vNode) {
       console.log("_update");
+      var vm = this;
+      var el = vm.$el;
+      // patch 既有初始化的功能，又有更新的公共功能
+      // 创建或者更新完毕后，返回的节点赋值给实例上，更新实例上的节点
+      vm.$el = patch(el, vNode);
     };
     Vue.prototype._render = function () {
       console.log("_render");
+      var vm = this;
+      return vm.$options.render.call(vm); // 通过 ast 语法转义后生成的 render 方法
     };
+  }
+  function patchProps(el, props) {
+    for (var key in props) {
+      if (key === "style") {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
+  }
+  function createElm(vNode) {
+    var tag = vNode.tag,
+      _vNode$children = vNode.children,
+      children = _vNode$children === void 0 ? [] : _vNode$children,
+      data = vNode.data,
+      text = vNode.text;
+    if (typeof tag === "string") {
+      // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
+      vNode.el = document.createElement(tag);
+
+      // 更新属性
+      patchProps(vNode.el, data);
+      children.forEach(function (child) {
+        var childElm = createElm(child);
+        vNode.el.appendChild(childElm);
+      });
+    } else {
+      vNode.el = document.createTextNode(text);
+    }
+    return vNode.el;
+  }
+  function patch(oldVNode, vNode) {
+    // 写的是初渲染流程
+    var isRealElement = oldVNode.nodeType;
+    if (isRealElement) {
+      var elm = oldVNode; // 获取真实元素
+      var parentElm = elm.parentNode; // 获取父元素
+      var newElm = createElm(vNode);
+      parentElm.insertBefore(newElm, elm.nextSibling);
+      // 移除老节点
+      parentElm.removeChild(elm);
+      return newElm;
+    } else {
+      console.log("TODO diff 算法");
+    }
   }
 
   function initMixin(Vue) {

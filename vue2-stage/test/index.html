@@ -13,6 +13,10 @@
     {{name}}hello {{age}} hello
   </div>
   <span>{{age}}</span>
+  <ul>
+    <li>{{name}}</li>
+    <li>{{age}}</li>
+  </ul>
 </div>
 </body>
 <script src="../dist/vue.js"></script>
@@ -34,6 +38,13 @@
   console.log(vm)
   vm.name = "孙悟空"
   console.log(vm.name)
+
+  setTimeout(() => {
+    vm.name = "猪八戒"
+    console.log("进行手动更新")
+    vm._update(vm._render()) // 进行手动更新
+    // 如果属性和视图可以关联起来，做到数据变化可以自动更新视图（观察者模式）就可以达到目的了
+  }, 1500)
 
   vm.address.content = "回龙观"
 
