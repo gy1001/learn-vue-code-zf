@@ -1,4 +1,5 @@
 import { newArrayProto } from "./array";
+import Dep from "./dep";
 
 class Observer {
   constructor(data) {
@@ -39,11 +40,15 @@ export function defineReactive(target, key, value) {
   // 如果还是对象，就需要再次进行劫持
   observe(value);
   // 这里使用了闭包
+  let dep = new Dep(); // 每一个属性都有一个 dep
   Object.defineProperty(target, key, {
     configurable: true,
     get() {
       console.log("用户取值了,key: ", key);
       // 取值的时候,会执行 get
+      if (Dep.target) {
+        dep.depend();
+      }
       return value;
     },
     set(newValue) {
@@ -53,6 +58,8 @@ export function defineReactive(target, key, value) {
         // 如果设置的是对象，也要进行劫持响应化处理
         observe(newValue);
         value = newValue;
+        // 通知相关依赖更新
+        dep.notify();
       }
     },
   });
