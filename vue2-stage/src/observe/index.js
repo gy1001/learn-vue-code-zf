@@ -44,15 +44,14 @@ export function defineReactive(target, key, value) {
   Object.defineProperty(target, key, {
     configurable: true,
     get() {
-      console.log("用户取值了,key: ", key);
+      console.log("用户取值了,key: ", key, value);
+      console.log(Dep.target, "1111111111");
       // 取值的时候,会执行 get
-      if (Dep.target) {
-        dep.depend();
-      }
+      dep.depend();
       return value;
     },
     set(newValue) {
-      console.log("用户设置值了,key: ", key);
+      console.log("用户设置值了,key: ", key, newValue);
       // 修改的时候，会执行 set
       if (newValue !== value) {
         // 如果设置的是对象，也要进行劫持响应化处理

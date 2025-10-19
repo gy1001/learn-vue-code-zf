@@ -27,7 +27,7 @@ export class Watcher {
   addDep(dep) {
     // 一个组件对应着多个属性，重复的属性也不用记录
     const depId = dep.id;
-    if (this.depsIdSet.has(depId)) {
+    if (!this.depsIdSet.has(depId)) {
       this.deps.push(dep);
       this.depsIdSet.add(depId);
       // watcher 已经记住了 dep 了而且已经去重了，此时让 dep 也记住 watcher
@@ -36,9 +36,45 @@ export class Watcher {
   }
 
   update() {
-    this.get(); // 重新更新渲染
+    // this.get(); // 重新更新渲染
+    // 下面开始做异步更新操作，那么就不能立即执行，我们用一个队列把函数暂存起啦
+    queueWatcher(this); // 把当前的 watcher 进行暂存
+  }
+
+  run() {
+    this.get();
   }
 }
+
+let queue = [];
+let has = {};
+let pending = false; // 防抖
+function queueWatcher(watcher) {
+  const watcherId = watcher.id;
+  if (!has[watcherId]) {
+    // 如果当前队列中没有当前 watcherId 就存入
+    queue.push(watcher);
+    has[watcherId] = true;
+    // 不管我们的 update 执行多少次，但是最终只执行一次刷新操作
+    if (!pending) {
+      setTimeout(flushSchedulerQueue, 0);
+      pending = true;
+    }
+  }
+}
+
+function flushSchedulerQueue() {
+  console.log("这里执行重新渲染操作------------------");
+  const newQueue = queue.slice();
+  queue.length = 0;
+  queue = [];
+  has = {};
+  pending = false;
+  for (let i = 0; i < newQueue.length; i++) {
+    newQueue[i].run(); // 在刷新的国策还给你中可能还有还有新的 watcher，重新翻到 queue 中
+  }
+}
+
 
 // 需要给可以个属性增加一个 dep，目的就是收集 watcher
 // 一个组价视图中有多个属性（n 个属性会对应一个视图)）,n 个 dep 对应一个 watcher

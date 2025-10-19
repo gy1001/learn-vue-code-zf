@@ -23,8 +23,9 @@
 <script>
   // 响应式的数据变化，数据变化了我们可以监听到数据的变化
   // 数据的取值和更改值
+  // const app = document.getElementById('app')
   const vm = new Vue({
-    el: '#app',
+    // el: '#app',
     data: { // 代理数据
       name: '珠峰',
       age: 20,
@@ -35,9 +36,10 @@
       hobby: ['eat', 'drink', {a: 1}]
     }
   })
-  console.log(vm)
-  vm.name = "孙悟空"
-  console.log(vm.name)
+  vm.$mount('#app');
+  // console.log(vm)
+  // vm.name = "孙悟空"
+  // console.log(vm.name)
 
   // setTimeout(() => {
   //   vm.name = "猪八戒"
@@ -46,12 +48,12 @@
   //   // 如果属性和视图可以关联起来，做到数据变化可以自动更新视图（观察者模式）就可以达到目的了
   // }, 1500)
 
-  vm.address.content = "回龙观"
+  // vm.address.content = "回龙观"
 
   // 修改数组很少用索引，但是内部做劫持会浪费性能
   // 用户一般修改数组，通常会使用数组的方法：push shift concat 等等
-  vm.hobby.unshift({b: 2})
-  console.log(vm)
+  // vm.hobby.unshift({b: 2})
+  // console.log(vm)
 
   // 1. 模板引擎，性能差，需要正则匹配替换，1.0的时候，没有引入虚拟DOM
   // 2. 采用虚拟DOM，数据变化后比较虚拟DOM的差异，最后更新需要更新的地方
@@ -65,11 +67,23 @@
   // 2. 模板编译：将模板先转换成 AST 语法树，将 AST 语法树生成 render 方法
   // 3. 调用 render 函数，会进行取值操作，产生对应的虚拟 DOM render(){ _c('div', null, _v(name)) } 触发 get 方法
   // 4. 将虚拟 DOM 渲染成真实 DOM
+  // setTimeout(() => {
+  //   vm.name = "猪八戒"
+  //   // console.log("进行手动更新")
+  //   // 如果属性和视图可以关联起来，做到数据变化可以自动更新视图（观察者模式）就可以达到目的了
+  // }, 100)
+
+  vm.name = "猪八戒 33333"
+  console.log("-------------------")
+  console.log(document.getElementById("app").innerHTML)
   setTimeout(() => {
-    vm.name = "猪八戒"
-    console.log("进行手动更新")
-    // 如果属性和视图可以关联起来，做到数据变化可以自动更新视图（观察者模式）就可以达到目的了
-  }, 1500)
+    console.log("setTimeout------------")
+    console.log(document.getElementById("app").innerHTML)
+  }, 2000)
+  Promise.resolve().then(() => {
+    console.log("Promise.resolve()------------")
+    console.log(document.getElementById("app").innerHTML)
+  })
 
   // 1. 观察者模式实现依赖收集
   // 2. 异步更新策略
@@ -79,6 +93,6 @@
   // 页面渲染的时候，我们将渲染逻辑封装到 watcher 中，vm._update(vm._render())
   // 让 dep 记住这个 watcher 即可，稍后属性变化了就可以找到对应的 dep 中存放的 watcher 进行重新渲染
   // 观察者模式
-  
+
 </script>
 </html>

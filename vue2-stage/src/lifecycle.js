@@ -84,6 +84,7 @@ function patch(oldVNode, vNode) {
   // 写的是初渲染流程
   const isRealElement = oldVNode.nodeType;
   if (isRealElement) {
+    console.log("这里进行渲染了");
     const elm = oldVNode; // 获取真实元素
     const parentElm = elm.parentNode; // 获取父元素
     const newElm = createElm(vNode);

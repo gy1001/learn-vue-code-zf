@@ -123,6 +123,40 @@
     };
   });
 
+  var uid = 0;
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+      this.id = uid++; // 属性的 dep 要收集 watcher
+      this.subs = []; // 这里面存放着当前属性对应的 watcher
+    }
+    return _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // 这里我们不需要放置重复的 watcher，而且这里还只是一个单向的关系：dep->watcher
+        // 其实 还需要双向：watcher -> dep: 比如组件卸载时候，需要删除对应的渲染函数
+        // 这里本来可以直接塞入，但是为了双向记录并且去重，所以不能简单的 push，需要绕一圈
+        // this.subs.push(Dep.target); ----> 简单这样写，不能去重
+        if (Dep.target) {
+          Dep.target.addDep(this); // 让 watcher 记住 dep
+        }
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          watcher.update();
+        });
+      }
+    }]);
+  }();
+  Dep.target = null;
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
@@ -166,20 +200,25 @@
     // 如果还是对象，就需要再次进行劫持
     observe(value);
     // 这里使用了闭包
+    var dep = new Dep(); // 每一个属性都有一个 dep
     Object.defineProperty(target, key, {
       configurable: true,
       get: function get() {
-        console.log("用户取值了,key: ", key);
+        console.log("用户取值了,key: ", key, value);
+        console.log(Dep.target, "1111111111");
         // 取值的时候,会执行 get
+        dep.depend();
         return value;
       },
       set: function set(newValue) {
-        console.log("用户设置值了,key: ", key);
+        console.log("用户设置值了,key: ", key, newValue);
         // 修改的时候，会执行 set
         if (newValue !== value) {
           // 如果设置的是对象，也要进行劫持响应化处理
           observe(newValue);
           value = newValue;
+          // 通知相关依赖更新
+          dep.notify();
         }
       }
     });
@@ -464,10 +503,101 @@
     return vNode(vm, undefined, undefined, undefined, undefined, text);
   }
 
+  var id = 0;
+
+  // 1. 当我们创建渲染 watcher 的时候我们会把当前的渲染 watcher 放到 Dep.target上
+  // 2. 调用 _render() 会取值，就会走到 get 上
+
+  // 每个属性有一个 dep（属性就是被观察者），watcher 就是观察者（属性更新了通知观察者来更新）=> 观察者模式
+
+  var Watcher = /*#__PURE__*/function () {
+    // 不同组件有不同的 watcher，目前只有一个渲染根实例的
+    function Watcher(vm, fn) {
+      _classCallCheck(this, Watcher);
+      this.id = id++;
+      this.getter = fn; // getter 意味着调用这个函数可以发生取值操作
+
+      this.depsIdSet = new Set();
+      this.deps = []; //用于记录对应的 dep，后续我们实现计算属性和一些清理工作需要用到
+      // 初始化时候调用一次，保证 vm 上的属性取值触发
+      this.get();
+    }
+    return _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        Dep.target = this;
+        this.getter(); // 这里会在 vm 上取值
+        Dep.target = null; // 渲染完毕后就清空
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        // 一个组件对应着多个属性，重复的属性也不用记录
+        var depId = dep.id;
+        if (!this.depsIdSet.has(depId)) {
+          this.deps.push(dep);
+          this.depsIdSet.add(depId);
+          // watcher 已经记住了 dep 了而且已经去重了，此时让 dep 也记住 watcher
+          dep.addSub(this);
+        }
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        // this.get(); // 重新更新渲染
+        // 下面开始做异步更新操作，那么就不能立即执行，我们用一个队列把函数暂存起啦
+        queueWatcher(this); // 把当前的 watcher 进行暂存
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        this.get();
+      }
+    }]);
+  }();
+  var queue = [];
+  var has = {};
+  var pending = false; // 防抖
+  function queueWatcher(watcher) {
+    var watcherId = watcher.id;
+    if (!has[watcherId]) {
+      // 如果当前队列中没有当前 watcherId 就存入
+      queue.push(watcher);
+      has[watcherId] = true;
+      // 不管我们的 update 执行多少次，但是最终只执行一次刷新操作
+      if (!pending) {
+        setTimeout(flushSchedulerQueue, 0);
+        pending = true;
+      }
+    }
+  }
+  function flushSchedulerQueue() {
+    console.log("这里执行重新渲染操作------------------");
+    var newQueue = queue.slice();
+    queue.length = 0;
+    queue = [];
+    has = {};
+    pending = false;
+    for (var i = 0; i < newQueue.length; i++) {
+      newQueue[i].run(); // 在刷新的国策还给你中可能还有还有新的 watcher，重新翻到 queue 中
+    }
+  }
+
+  // 需要给可以个属性增加一个 dep，目的就是收集 watcher
+  // 一个组价视图中有多个属性（n 个属性会对应一个视图)）,n 个 dep 对应一个 watcher
+  // 1 个属性对应多个视图, 1个 dep 对应多个 watcher
+  // 多对多的关系
+
   function mountComponent(vm, el) {
     vm.$el = el;
     // 1. 调用 render 方法产生虚拟节点 虚拟 DOM
-    vm._update(vm._render()); // vm.$options.render() 虚拟节点
+    // vm._update(vm._render()); // vm.$options.render() 虚拟节点
+
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+    new Watcher(vm, updateComponent, true); // true 用于标识这是一个渲染 watcher
+
     // 2. 根据虚拟 DOM 产生真是 DOM
     // 3. 插入到 el 元素中
   }
@@ -537,6 +667,7 @@
     // 写的是初渲染流程
     var isRealElement = oldVNode.nodeType;
     if (isRealElement) {
+      console.log("这里进行渲染了");
       var elm = oldVNode; // 获取真实元素
       var parentElm = elm.parentNode; // 获取父元素
       var newElm = createElm(vNode);
