@@ -57,7 +57,7 @@ function queueWatcher(watcher) {
     has[watcherId] = true;
     // 不管我们的 update 执行多少次，但是最终只执行一次刷新操作
     if (!pending) {
-      setTimeout(flushSchedulerQueue, 0);
+      nextTick(flushSchedulerQueue);
       pending = true;
     }
   }
@@ -72,6 +72,58 @@ function flushSchedulerQueue() {
   pending = false;
   for (let i = 0; i < newQueue.length; i++) {
     newQueue[i].run(); // 在刷新的国策还给你中可能还有还有新的 watcher，重新翻到 queue 中
+  }
+}
+
+let callbacks = [];
+let waiting = false;
+function flushCallbacks() {
+  const cbs = callbacks.slice();
+  waiting = false;
+  callbacks = [];
+  cbs.forEach((callback) => callback()); // 按照顺序执行
+}
+
+// nextTick 中没有直接使用某个 api，而是采用了优雅降级的方式
+// 内部先采用的是 promise（IE 不兼容）
+// 然后采用 MutationObserver（h5的 api）
+// 然后在考虑 IE 专享 setIMediate
+// 然后再使用 setTimeout
+
+let timerFunction;
+if (Promise) {
+  timerFunction = () => {
+    Promise.resolve().then(flushCallbacks);
+  };
+} else if (MutationObserver) {
+  timerFunction = () => {
+    let observer = new MutationObserver(flushCallbacks);
+    // 这里传入的回调是异步执行的
+    const textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true,
+    });
+    timerFunction = () => {
+      textNode.textContent = 2;
+    };
+  };
+} else if (setImmediate) {
+  timerFunction = () => {
+    setImmediate(flushCallbacks);
+  };
+} else {
+  timerFunction = () => {
+    setTimeout(flushCallbacks);
+  };
+}
+
+export function nextTick(cb) {
+  callbacks.push(cb); // 维护 nextTick中的 callback
+  if (!waiting) {
+    timerFunction();
+    // vue3已经不兼容 ie 直接使用 promise
+    // Promise.resolve().then(flushCallbacks); // vue3的写法
+    waiting = true;
   }
 }
 

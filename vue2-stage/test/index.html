@@ -74,14 +74,27 @@
   // }, 100)
 
   vm.name = "猪八戒 33333"
-  console.log("-------------------")
-  console.log(document.getElementById("app").innerHTML)
-  setTimeout(() => {
-    console.log("setTimeout------------")
+  // console.log("-------------------")
+  // console.log(document.getElementById("app").innerHTML)
+  // setTimeout(() => {
+  //   console.log("setTimeout------------")
+  //   console.log(document.getElementById("app").innerHTML)
+  // }, 2000)
+  // Promise.resolve().then(() => {
+  //   console.log("Promise.resolve()------------")
+  //   console.log(document.getElementById("app").innerHTML)
+  // })
+  vm.$nextTick(() => {
+    console.log("vm.$nextTick")
     console.log(document.getElementById("app").innerHTML)
-  }, 2000)
-  Promise.resolve().then(() => {
-    console.log("Promise.resolve()------------")
+  })
+  vm.$nextTick(() => {
+    console.log("vm.$nextTick")
+    console.log(document.getElementById("app").innerHTML)
+  })
+  // nextTick不是创建了一个异步任务，而是将这个任务维护到了队列中
+  vm.$nextTick(() => {
+    console.log("vm.$nextTick")
     console.log(document.getElementById("app").innerHTML)
   })
 
