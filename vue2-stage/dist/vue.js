@@ -106,6 +106,8 @@
       // 内部调用原来的方法，函数的劫持，切片编程
       var result = (_originArrayProto$met = originArrayProto[method]).call.apply(_originArrayProto$met, [this].concat(args));
       console.log("方法被调用了, method: ", method);
+      console.log(this, "arrayMethods--------------");
+      var ob = this.__ob__;
       // 我们需要对新增的数据再次进行劫持
       var inserted;
       switch (method) {
@@ -118,7 +120,12 @@
           break;
       }
       // 对插入的数据进行劫持
-      observe(inserted);
+      if (inserted) {
+        ob.observeArray(inserted);
+      }
+
+      // 走到这里进行通知更新
+      ob.dep.notify(); // 数组变化了通知对应的 watcher 进行更新
       return result;
     };
   });
@@ -160,6 +167,9 @@
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
+      // 给每个对象都增加收集功能
+      this.dep = new Dep();
+
       // Object.defineProperty 只能劫持已经存在的属性，新增、删除的都无法
       // vue2中为此还专门写了一个api: $set $delete
       // data.__ob__ = this; // 这里直接赋值会导致死循环，一直加__ob__
@@ -195,19 +205,40 @@
         });
       }
     }]);
-  }(); // 属性劫持
+  }(); // 深层次嵌套会递归，递归多了性能差，不存在的属性监控不到，存在的属性又重写方法
+  // vue3 采用了 proxy，省略了这些过程
+  function dependArray(arr) {
+    for (var i = 0; i < arr.length; i++) {
+      var current = arr[i];
+      // 如果 current 是一个数组中的字符串，就没有__ob__
+      if (current.__ob__) {
+        current.__ob__.dep.depend();
+      }
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
+  // 属性劫持
   function defineReactive(target, key, value) {
     // 如果还是对象，就需要再次进行劫持
-    observe(value);
+    var childOb = observe(value); // childOb上就有 dep 属性，用来收集依赖
     // 这里使用了闭包
     var dep = new Dep(); // 每一个属性都有一个 dep
     Object.defineProperty(target, key, {
       configurable: true,
       get: function get() {
         console.log("用户取值了,key: ", key, value);
-        console.log(Dep.target, "1111111111");
         // 取值的时候,会执行 get
         dep.depend();
+        if (childOb) {
+          childOb.dep.depend(); // 让数组和对象本身也实现依赖收集，以前针对的是属性，现在增加对象本身
+          // 这里还要做判断，如果当前值是数组
+          if (Array.isArray(value)) {
+            dependArray(value);
+          }
+        }
         return value;
       },
       set: function set(newValue) {

@@ -1,42 +1,50 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
-        name="viewport">
-  <meta content="ie=edge" http-equiv="X-UA-Compatible">
+  <meta charset="UTF-8"/>
+  <meta
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    name="viewport"
+  />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible"/>
   <title>Document</title>
 </head>
 <body>
 <div id="app" style="padding: 20px">
-  <div style="color: red">
-    {{name}}hello {{age}} hello
-  </div>
+  <div style="color: red">{{name}}hello {{age}} hello</div>
   <span>{{age}}</span>
   <ul>
     <li>{{name}}</li>
     <li>{{age}}</li>
   </ul>
+  <h4>数组变化</h4>
+  <div>arr: {{arr}}</div>
+  <div>arr.length: {{arr.length}}</div>
+  <h4>对象新增属性呢？</h4>
+  <div>{{address}}</div>
 </div>
 </body>
 <script src="../dist/vue.js"></script>
+
+<!--<script src="../dist/libs/vue/2.6.14/vue.js"></script>-->
 <script>
   // 响应式的数据变化，数据变化了我们可以监听到数据的变化
   // 数据的取值和更改值
   // const app = document.getElementById('app')
   const vm = new Vue({
     // el: '#app',
-    data: { // 代理数据
-      name: '珠峰',
+    data: {
+      // 代理数据
+      name: "珠峰",
       age: 20,
       address: {
-        content: '天通苑',
-        number: 30
+        content: "天通苑",
+        number: 30,
       },
-      hobby: ['eat', 'drink', {a: 1}]
-    }
-  })
-  vm.$mount('#app');
+      arr: [1, 2, 3, [[1, 2, 3], 1, 2, 3], {a: '12'}],
+    },
+  });
+  vm.$mount("#app");
   // console.log(vm)
   // vm.name = "孙悟空"
   // console.log(vm.name)
@@ -62,7 +70,6 @@
   // 从一个东西变为 另一个东西，语法之间的转化： es6 -> es5
   // css 压缩，我们需要先把语法树木在重新组装代码成为新的语法
 
-
   // 1. 将数据先处理成响应式，initState 针对对象来说主要是增加 defineProperty 针对数组就是重写方法
   // 2. 模板编译：将模板先转换成 AST 语法树，将 AST 语法树生成 render 方法
   // 3. 调用 render 函数，会进行取值操作，产生对应的虚拟 DOM render(){ _c('div', null, _v(name)) } 触发 get 方法
@@ -73,7 +80,7 @@
   //   // 如果属性和视图可以关联起来，做到数据变化可以自动更新视图（观察者模式）就可以达到目的了
   // }, 100)
 
-  vm.name = "猪八戒 33333"
+  // vm.name = "猪八戒 33333"
   // console.log("-------------------")
   // console.log(document.getElementById("app").innerHTML)
   // setTimeout(() => {
@@ -84,19 +91,19 @@
   //   console.log("Promise.resolve()------------")
   //   console.log(document.getElementById("app").innerHTML)
   // })
-  vm.$nextTick(() => {
-    console.log("vm.$nextTick")
-    console.log(document.getElementById("app").innerHTML)
-  })
-  vm.$nextTick(() => {
-    console.log("vm.$nextTick")
-    console.log(document.getElementById("app").innerHTML)
-  })
-  // nextTick不是创建了一个异步任务，而是将这个任务维护到了队列中
-  vm.$nextTick(() => {
-    console.log("vm.$nextTick")
-    console.log(document.getElementById("app").innerHTML)
-  })
+  // vm.$nextTick(() => {
+  //   console.log("vm.$nextTick")
+  //   console.log(document.getElementById("app").innerHTML)
+  // })
+  // vm.$nextTick(() => {
+  //   console.log("vm.$nextTick")
+  //   console.log(document.getElementById("app").innerHTML)
+  // })
+  // // nextTick不是创建了一个异步任务，而是将这个任务维护到了队列中
+  // vm.$nextTick(() => {
+  //   console.log("vm.$nextTick")
+  //   console.log(document.getElementById("app").innerHTML)
+  // })
 
   // 1. 观察者模式实现依赖收集
   // 2. 异步更新策略
@@ -107,5 +114,26 @@
   // 让 dep 记住这个 watcher 即可，稍后属性变化了就可以找到对应的 dep 中存放的 watcher 进行重新渲染
   // 观察者模式
 
+  // 数组更新
+  // vm.arr[0] = 100// 通过这种方式更改可以监控到吗？？ 只是重写了数组方法，并不能
+  // vm.arr.length = 100 // 没有监控长度变化，所以也不能监听到
+  // 但是如果伴随着 修改其他响应式属性 比如同时修改 vm.name=xxxx，就会出现内容更新，是副作用导致的，注意哦！！！！
+
+  // 这里改变的并不是 arr 对象，而是 arr 对象中的数组属性
+  vm.arr.push(100);
+
+  setTimeout(() => {
+    vm.address.phone = "151";
+    // 这里因为对对象本身进行了依赖收集，所以我们可以通过手动更新的方式来达到更新的
+    // vm.address.__ob__.dep.notify() // 这里其实就是 $set 原理
+  }, 1000);
+
+  // 对于数组中套数组呢,还要进行依赖收集
+  setTimeout(() => {
+    vm.arr[3].push(100);
+  }, 2000);
+  setTimeout(() => {
+    vm.arr[3][0].push(100);
+  }, 3000);
 </script>
 </html>

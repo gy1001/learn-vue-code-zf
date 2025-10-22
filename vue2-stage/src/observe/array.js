@@ -24,6 +24,8 @@ arrayMethods.forEach((method) => {
     // 内部调用原来的方法，函数的劫持，切片编程
     const result = originArrayProto[method].call(this, ...args);
     console.log("方法被调用了, method: ", method);
+    console.log(this, "arrayMethods--------------");
+    const ob = this.__ob__;
     // 我们需要对新增的数据再次进行劫持
     let inserted;
     switch (method) {
@@ -38,7 +40,12 @@ arrayMethods.forEach((method) => {
         break;
     }
     // 对插入的数据进行劫持
-    observe(inserted);
+    if (inserted) {
+      ob.observeArray(inserted);
+    }
+
+    // 走到这里进行通知更新
+    ob.dep.notify(); // 数组变化了通知对应的 watcher 进行更新
     return result;
   };
 });
