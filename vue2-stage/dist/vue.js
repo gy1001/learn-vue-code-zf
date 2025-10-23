@@ -686,22 +686,22 @@
   }
   function initLifeCycle(Vue) {
     Vue.prototype._c = function () {
-      console.log("调用了 _c");
+      console.log('调用了 _c');
       return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
     };
     Vue.prototype._v = function () {
-      console.log("调用了 _v");
+      console.log('调用了 _v');
       return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
     };
     Vue.prototype._s = function (value) {
-      console.log("调用了 _s");
-      if (_typeof(value) !== "object") {
+      console.log('调用了 _s');
+      if (_typeof(value) !== 'object') {
         return value;
       }
       return JSON.stringify(value);
     };
     Vue.prototype._update = function (vNode) {
-      console.log("_update");
+      console.log('_update');
       var vm = this;
       var el = vm.$el;
       // patch 既有初始化的功能，又有更新的公共功能
@@ -709,14 +709,14 @@
       vm.$el = patch(el, vNode);
     };
     Vue.prototype._render = function () {
-      console.log("_render");
+      console.log('_render');
       var vm = this;
       return vm.$options.render.call(vm); // 通过 ast 语法转义后生成的 render 方法
     };
   }
   function patchProps(el, props) {
     for (var key in props) {
-      if (key === "style") {
+      if (key === 'style') {
         for (var styleName in props.style) {
           el.style[styleName] = props.style[styleName];
         }
@@ -731,7 +731,7 @@
       children = _vNode$children === void 0 ? [] : _vNode$children,
       data = vNode.data,
       text = vNode.text;
-    if (typeof tag === "string") {
+    if (typeof tag === 'string') {
       // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
       vNode.el = document.createElement(tag);
 
@@ -750,7 +750,7 @@
     // 写的是初渲染流程
     var isRealElement = oldVNode.nodeType;
     if (isRealElement) {
-      console.log("这里进行渲染了");
+      console.log('这里进行渲染了');
       var elm = oldVNode; // 获取真实元素
       var parentElm = elm.parentNode; // 获取父元素
       var newElm = createElm(vNode);
@@ -759,8 +759,61 @@
       parentElm.removeChild(elm);
       return newElm;
     } else {
-      console.log("TODO diff 算法");
+      console.log('TODO diff 算法');
     }
+  }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        handler.call(vm);
+      });
+    }
+  }
+
+  var strats = {};
+  var LIFE_CYCLE = ['beforeCreate', 'created', 'beforeMount'];
+  LIFE_CYCLE.forEach(function (cycle) {
+    // {} {created: function(){} } => {created: [fn]}
+    // {created: [fn]} {created: function(){}} => {created: [fn, fn]}
+    strats[cycle] = function (p, c) {
+      if (c) {
+        // 如果儿子有，并且父亲有，让父亲和儿子拼在一起
+        if (p) {
+          return p.concat(c);
+        } else {
+          // 对于第一次，只有儿子有，父亲没有, 则将儿子包装成对象
+          return [c];
+        }
+      } else {
+        // 如果儿子没有，则用父亲即可
+        return p;
+      }
+    };
+  });
+  function mergeOptions(parent, child) {
+    console.log(parent, child, 'parent, child');
+    function mergeField(key) {
+      // 为了避免多次 if，可以采用策略模式
+      if (strats[key]) {
+        options[key] = strats[key](parent[key], child[key]);
+      } else {
+        // 如果不在策略中
+        // 优先采用 child 的，再采用 parent 的
+        options[key] = child[key] || parent[key];
+      }
+    }
+    var options = {};
+    for (var key in parent) {
+      mergeField(key);
+    }
+    for (var _key in child) {
+      // 在这里只合并child 中不存在于 parent 的属性
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+    return options;
   }
 
   function initMixin(Vue) {
@@ -770,12 +823,19 @@
       // vue vm.$options 就是获取用户的配置项
 
       var vm = this;
-      vm.$options = options; // 将用户的选项挂在在实例上
+
+      // 我们定义的全局指令和过滤器等等等，都会挂在实例上
+      vm.$options = mergeOptions(this.constructor.options, options); // 将用户的选项挂在在实例上
+      console.log(vm.$options, 'vm.$options');
+
+      // 初始化之前， 调用 hooks 上的 beforeCreate
+      callHook(vm, 'beforeCreate');
 
       // 初始化状态
       initState(vm);
 
-      //
+      // 初始化之后， 调用 hooks 上的 created
+      callHook(vm, 'created');
       if (options.el) {
         vm.$mount(options.el); // 实现数据的挂在
       }
@@ -814,6 +874,16 @@
   // runtime 是不包含模板编译的，整个编译打包的过程是通过 loader 来转义 .vue 文件的，
   // 用runtime时候不能使用 template
 
+  function initGlobalApi(Vue) {
+    // 静态方法
+    Vue.options = {};
+    Vue.mixin = function (mixin) {
+      // 我们期望将用户的选项和全局的 options 进行合并
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
   function Vue(options) {
     // options 就是用户的选项
     this._init(options);
@@ -821,6 +891,7 @@
   Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
+  initGlobalApi(Vue);
 
   return Vue;
 
