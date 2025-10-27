@@ -11,7 +11,7 @@
 </head>
 <body>
 <div id="app">
-  {{firstName}}-{{lastName}}--{{firstName}}
+  {{fullName}}-{{fullName}}
 </div>
 </body>
 <script src="../dist/vue.js"></script>
@@ -32,7 +32,7 @@
     // 计算属性也是一个 watcher，默认渲染会创造一个渲染 watcher
     computed: {
       fullName() {
-        console.log('run 只会在依赖属性发生变化时候才执行')
+        console.log('------run 只会在依赖属性发生变化时候才执行-----------')
         return this.firstName + '-1-' + this.lastName
       },
       fullName2: {
@@ -46,10 +46,9 @@
     },
   })
 
-  console.log(vm.fullName)
-  console.log(vm.fullName2)
   setTimeout(() => {
+    vm.firstName = '我是更改了'
     vm.fullName2 = '孙悟--空'
-  }, 1000)
+  }, 3000)
 </script>
 </html>
