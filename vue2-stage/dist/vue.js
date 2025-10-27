@@ -338,12 +338,25 @@
       value: function update() {
         // this.get(); // 重新更新渲染
         // 下面开始做异步更新操作，那么就不能立即执行，我们用一个队列把函数暂存起啦
-        queueWatcher(this); // 把当前的 watcher 进行暂存
+        if (this.lazy) {
+          // 如果是计算属性. 依赖的值发生了变化，就标识计算属性是脏值了
+          this.dirty = true;
+        } else {
+          queueWatcher(this); // 把当前的 watcher 进行暂存
+        }
       }
     }, {
       key: "run",
       value: function run() {
         this.get();
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
+        while (i--) {
+          this.deps[i].depend(); // 让计算属性 watcher 也收集渲染 watcher
+        }
       }
     }]);
   }();
@@ -469,13 +482,18 @@
     });
   }
 
-  // 我们需要检测是否要执行这个 getter
+  // 计算属性根本不会收集依赖，只会让自己的依赖属性去收集依赖
   function createComputedGetter(key) {
+    // 我们需要检测是否要执行这个 getter
     return function () {
       var watcher = this._computedWatchers[key]; // 获取到对应属性的 watcher
       if (watcher.dirty) {
         // 如果是脏的，就去执行用户传入的函数
         watcher.evaluate(); // 求值后，dirty 变为了 false，下次就不会在求值了
+      }
+      // 计算属性出栈后，还有渲染 watcher，我应该让 watcher 里面的属性也去收集上层的 watcher
+      if (Dep.target) {
+        watcher.depend();
       }
       return watcher.value;
     };

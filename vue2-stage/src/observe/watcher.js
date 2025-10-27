@@ -59,11 +59,23 @@ export class Watcher {
   update() {
     // this.get(); // 重新更新渲染
     // 下面开始做异步更新操作，那么就不能立即执行，我们用一个队列把函数暂存起啦
-    queueWatcher(this) // 把当前的 watcher 进行暂存
+    if (this.lazy) {
+      // 如果是计算属性. 依赖的值发生了变化，就标识计算属性是脏值了
+      this.dirty = true
+    } else {
+      queueWatcher(this) // 把当前的 watcher 进行暂存
+    }
   }
 
   run() {
     this.get()
+  }
+
+  depend() {
+    let i = this.deps.length
+    while (i--) {
+      this.deps[i].depend() // 让计算属性 watcher 也收集渲染 watcher
+    }
   }
 }
 

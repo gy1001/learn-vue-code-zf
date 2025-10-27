@@ -1,5 +1,6 @@
 import { observe } from './observe/index'
 import { Watcher } from './observe/watcher'
+import Dep from './observe/dep'
 
 export function initState(vm) {
   const opts = vm.$options
@@ -44,13 +45,18 @@ function defineComputed(target, key, computedValue) {
   })
 }
 
-// 我们需要检测是否要执行这个 getter
+// 计算属性根本不会收集依赖，只会让自己的依赖属性去收集依赖
 function createComputedGetter(key) {
+  // 我们需要检测是否要执行这个 getter
   return function () {
     const watcher = this._computedWatchers[key] // 获取到对应属性的 watcher
     if (watcher.dirty) {
       // 如果是脏的，就去执行用户传入的函数
       watcher.evaluate() // 求值后，dirty 变为了 false，下次就不会在求值了
+    }
+    // 计算属性出栈后，还有渲染 watcher，我应该让 watcher 里面的属性也去收集上层的 watcher
+    if (Dep.target) {
+      watcher.depend()
     }
     return watcher.value
   }
