@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    name="viewport"
+  />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible"/>
+  <title>Document</title>
+</head>
+<body>
+<div id="app">
+  {{firstName}}-{{lastName}}--{{firstName}}
+</div>
+</body>
+<script src="../dist/vue.js"></script>
+
+<!--<script src="../dist/libs/vue/2.6.14/vue.js"></script>-->
+<script>
+  // 1. 计算属性原理
+  const vm = new Vue({
+    el: '#app',
+    data: {
+      firstName: '珠',
+      lastName: '峰',
+    },
+    // 计算属性中要维护一个 dirty 属性，因为它只有在依赖的值发生变化的时候才会重新执行
+    // 默认计算属性不会立刻执行，只会在页面中需要才执行
+    // 计算属性是一个 defineProperty
+
+    // 计算属性也是一个 watcher，默认渲染会创造一个渲染 watcher
+    computed: {
+      fullName() {
+        console.log('run 只会在依赖属性发生变化时候才执行')
+        return this.firstName + '-1-' + this.lastName
+      },
+      fullName2: {
+        get() {
+          return this.lastName + '-2-' + this.firstName
+        },
+        set(newValue) {
+          console.log(newValue)
+        },
+      },
+    },
+  })
+
+  console.log(vm.fullName)
+  console.log(vm.fullName2)
+  setTimeout(() => {
+    vm.fullName2 = '孙悟--空'
+  }, 1000)
+</script>
+</html>

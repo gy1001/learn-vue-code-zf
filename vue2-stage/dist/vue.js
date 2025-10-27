@@ -163,6 +163,15 @@
     }]);
   }();
   Dep.target = null;
+  var stack = [];
+  function pushTarget(watcher) {
+    stack.push(watcher);
+    Dep.target = watcher;
+  }
+  function popTarget(watcher) {
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
 
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
@@ -556,9 +565,15 @@
     return _createClass(Watcher, [{
       key: "get",
       value: function get() {
-        Dep.target = this;
-        this.getter(); // 这里会在 vm 上取值
-        Dep.target = null; // 渲染完毕后就清空
+        // Dep.target = this;
+        // this.getter(); // 这里会在 vm 上取值
+        // Dep.target = null; // 渲染完毕后就清空
+        // -------------
+        // 这里改为：维护为一个队列，
+
+        pushTarget(this);
+        this.getter();
+        popTarget();
       }
     }, {
       key: "addDep",
@@ -603,7 +618,7 @@
     }
   }
   function flushSchedulerQueue() {
-    console.log("这里执行重新渲染操作------------------");
+    console.log('这里执行重新渲染操作------------------');
     var newQueue = queue.slice();
     queue.length = 0;
     queue = [];
