@@ -8,14 +8,28 @@ let id = 0
 
 export class Watcher {
   // 不同组件有不同的 watcher，目前只有一个渲染根实例的
-  constructor(vm, fn) {
+  constructor(vm, fn, options) {
     this.id = id++
+    this.renderWatcher = options // 是否是一个渲染 watcher
     this.getter = fn // getter 意味着调用这个函数可以发生取值操作
+    this.lazy = options.lazy // 是否懒惰
+    this.dirty = this.lazy
 
     this.depsIdSet = new Set()
+    this.vm = vm
     this.deps = [] //用于记录对应的 dep，后续我们实现计算属性和一些清理工作需要用到
     // 初始化时候调用一次，保证 vm 上的属性取值触发
-    this.get()
+
+    if (this.lazy) {
+      // 如果是懒惰的，默认不取值
+    } else {
+      this.get()
+    }
+  }
+
+  evaluate() {
+    this.value = this.get() // 获取到用户函数的返回值
+    this.dirty = false // 并且还要标识为脏
   }
 
   get() {
@@ -26,8 +40,9 @@ export class Watcher {
     // 这里改为：维护为一个队列，
 
     pushTarget(this)
-    this.getter()
+    const value = this.getter.call(this.vm)
     popTarget()
+    return value
   }
 
   addDep(dep) {
