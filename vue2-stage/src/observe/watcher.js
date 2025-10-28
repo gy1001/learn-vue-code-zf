@@ -8,12 +8,21 @@ let id = 0
 
 export class Watcher {
   // 不同组件有不同的 watcher，目前只有一个渲染根实例的
-  constructor(vm, fn, options) {
+  constructor(vm, exprOrFn, options = {}, cb) {
     this.id = id++
     this.renderWatcher = options // 是否是一个渲染 watcher
-    this.getter = fn // getter 意味着调用这个函数可以发生取值操作
+    if (typeof exprOrFn === 'string') {
+      this.getter = function () {
+        return vm[exprOrFn] // 去实例上取值
+      }
+    } else {
+      this.getter = exprOrFn // getter 意味着调用这个函数可以发生取值操作
+    }
+
     this.lazy = options.lazy // 是否懒惰
     this.dirty = this.lazy
+    this.cb = cb
+    this.user = options.user // 标识，是否是用户自己的 watcher
 
     this.depsIdSet = new Set()
     this.vm = vm
@@ -23,7 +32,7 @@ export class Watcher {
     if (this.lazy) {
       // 如果是懒惰的，默认不取值
     } else {
-      this.get()
+      this.value = this.get()
     }
   }
 
@@ -68,7 +77,12 @@ export class Watcher {
   }
 
   run() {
-    this.get()
+    let oldValue = this.value
+    const newValue = this.get()
+    if (this.user) {
+      // 如果是当前 watcher
+      this.cb.call(this.vm, newValue, oldValue)
+    }
   }
 
   depend() {

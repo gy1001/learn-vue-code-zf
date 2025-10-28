@@ -12,6 +12,35 @@ export function initState(vm) {
   if (opts.computed) {
     initComputed(vm)
   }
+
+  if (opts.watch) {
+    initWatch(vm)
+  }
+}
+
+function initWatch(vm) {
+  const watch = vm.$options.watch
+  for (let key in watch) {
+    // 字符串、数组、函数
+    const handler = watch[key]
+    if (Array.isArray(handler)) {
+      // 如果是数组，我就去循环创建
+      handler.forEach((handler) => {
+        createWatcher(vm, key, handler)
+      })
+    } else {
+      createWatcher(vm, key, handler)
+    }
+  }
+}
+
+function createWatcher(vm, key, handler) {
+  // vm.$watch()
+  if (typeof handler === 'string') {
+    handler = vm[handler]
+  }
+
+  return vm.$watch(key, handler)
 }
 
 function initComputed(vm) {

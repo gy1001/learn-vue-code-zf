@@ -285,20 +285,31 @@
 
   var Watcher = /*#__PURE__*/function () {
     // 不同组件有不同的 watcher，目前只有一个渲染根实例的
-    function Watcher(vm, fn, options) {
+    function Watcher(vm, exprOrFn) {
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var cb = arguments.length > 3 ? arguments[3] : undefined;
       _classCallCheck(this, Watcher);
       this.id = id++;
       this.renderWatcher = options; // 是否是一个渲染 watcher
-      this.getter = fn; // getter 意味着调用这个函数可以发生取值操作
+      if (typeof exprOrFn === 'string') {
+        this.getter = function () {
+          return vm[exprOrFn]; // 去实例上取值
+        };
+      } else {
+        this.getter = exprOrFn; // getter 意味着调用这个函数可以发生取值操作
+      }
       this.lazy = options.lazy; // 是否懒惰
       this.dirty = this.lazy;
+      this.cb = cb;
+      this.user = options.user; // 标识，是否是用户自己的 watcher
+
       this.depsIdSet = new Set();
       this.vm = vm;
       this.deps = []; //用于记录对应的 dep，后续我们实现计算属性和一些清理工作需要用到
       // 初始化时候调用一次，保证 vm 上的属性取值触发
 
       if (this.lazy) ; else {
-        this.get();
+        this.value = this.get();
       }
     }
     return _createClass(Watcher, [{
@@ -348,7 +359,12 @@
     }, {
       key: "run",
       value: function run() {
-        this.get();
+        var oldValue = this.value;
+        var newValue = this.get();
+        if (this.user) {
+          // 如果是当前 watcher
+          this.cb.call(this.vm, newValue, oldValue);
+        }
       }
     }, {
       key: "depend",
@@ -453,6 +469,34 @@
     if (opts.computed) {
       initComputed(vm);
     }
+    if (opts.watch) {
+      initWatch(vm);
+    }
+  }
+  function initWatch(vm) {
+    var watch = vm.$options.watch;
+    var _loop = function _loop(key) {
+      // 字符串、数组、函数
+      var handler = watch[key];
+      if (Array.isArray(handler)) {
+        // 如果是数组，我就去循环创建
+        handler.forEach(function (handler) {
+          createWatcher(vm, key, handler);
+        });
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    };
+    for (var key in watch) {
+      _loop(key);
+    }
+  }
+  function createWatcher(vm, key, handler) {
+    // vm.$watch()
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+    return vm.$watch(key, handler);
   }
   function initComputed(vm) {
     var computed = vm.$options.computed;
@@ -980,6 +1024,19 @@
   initMixin(Vue);
   initLifeCycle(Vue);
   initGlobalApi(Vue);
+
+  // 最终调用的都是这个方法
+  Vue.prototype.$watch = function (exprOrFn, cb) {
+    // 参数：{deep: true, immediate: true} // 先不处理了
+    // console.log(exprOrFn, cb)
+    // exprOrFn 可能是字符串，有可能是函数 firstName ,() => vm.firstName
+    // new Watcher(this)
+
+    // firstName的值变化了，直接执行 cb
+    new Watcher(this, exprOrFn, {
+      user: true
+    }, cb);
+  };
 
   return Vue;
 
