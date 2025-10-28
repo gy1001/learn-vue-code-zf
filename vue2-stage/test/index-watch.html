@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    name="viewport"
+  />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible"/>
+  <title>watch</title>
+</head>
+<body>
+<div id="app">{{fullName}} --{{fullName}}</div>
+</body>
+<!--<script src="../dist/vue.js"></script>-->
+
+<script src="../dist/libs/vue/2.6.14/vue.js"></script>
+<script>
+  // 1. 计算属性原理
+  const vm = new Vue({
+    el: '#app',
+    data: {
+      firstName: '珠',
+      lastName: '峰',
+      thirdName: '我',
+    },
+    computed: {
+      fullName() {
+        return this.firstName + '-1-' + this.lastName
+      },
+      fullName2: {
+        get() {
+          return this.lastName + '-2-' + this.firstName
+        },
+        set(newValue) {
+          console.log(newValue)
+        },
+      },
+    },
+    methods: {
+      fn(newValue, oldValue) {
+        console.log('methods fn - 01', newValue, oldValue)
+      },
+    },
+    watch: {
+      // 直接写一个函数
+      firstName(newValue, oldValue) {
+        console.log('watch firstName-01', newValue, oldValue)
+      },
+      lastName: [
+        (newValue, oldValue) => {
+          console.log('watch lastName-01', newValue, oldValue)
+        },
+        (newValue, oldValue) => {
+          console.log('watch lastName-02', newValue, oldValue)
+        },
+      ],
+      thirdName: 'fn',
+    },
+  })
+
+  // 底层就算你写的是上面的方式，也会被转换成 $watch 写法
+  vm.$watch(
+    () => vm.firstName,
+    (newValue, oldValue) => {
+      console.log('vm $watch-firstName-01', newValue, oldValue)
+    },
+  )
+  vm.$watch('firstName', (newValue, oldValue) => {
+    console.log('vm $watch-firstName-02', newValue, oldValue)
+  })
+
+  setTimeout(() => {
+    vm.firstName = 'firstName 变化了'
+    vm.lastName = 'lastName 变化了'
+    vm.thirdName = 'thirdName 变化了'
+  }, 2000)
+</script>
+</html>
