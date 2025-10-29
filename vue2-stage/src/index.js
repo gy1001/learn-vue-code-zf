@@ -15,7 +15,9 @@ initGlobalApi(Vue) // 全局 api 的实现
 initStateMixin(Vue) // 实现了 $nextTick $watch
 
 // 为了方便观察前后的虚拟节点，测试的
-let render1 = compileToFunction(`<li style="color:red;" key="a">{{name}}</li>`)
+let render1 = compileToFunction(
+  `<li key="a" a="1" style="color: red">{{name}}</li>`,
+)
 const vm1 = new Vue({ data: { name: '珠峰' } })
 const prevVNode = render1.call(vm1)
 console.log(prevVNode)
@@ -23,7 +25,7 @@ const el1 = createElm(prevVNode)
 document.body.appendChild(el1)
 
 let render2 = compileToFunction(
-  `<span style="color:red;background-color: blue" key="a">{{name}}</span>`,
+  `<li key="a" a="1" b="2" style="color:white;background-color: blue">{{name}}+111</li>`,
 )
 const vm2 = new Vue({ data: { name: '珠峰2' } })
 const nextVNode = render2.call(vm2)

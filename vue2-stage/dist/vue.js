@@ -824,14 +824,33 @@
     return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   }
 
-  function patchProps(el, props) {
-    for (var key in props) {
-      if (key === 'style') {
+  function patchProps(el, oldProps, props) {
+    // 老的属性，在新的属性占用没有，要进行删除
+    var oldStyles = oldProps.style || {};
+    var newStyles = props.style || {};
+    // 先处理 style 属性
+    for (var key in oldStyles) {
+      if (!newStyles[key]) {
+        el.style[key] = '';
+      }
+    }
+
+    // 再处理其他的 props
+    for (var _key in oldProps) {
+      // 老的属性中有，新的属性中没有，进删除
+      if (!props[_key]) {
+        el.removeAttribute(_key);
+      }
+    }
+
+    // 用新的属性覆盖老的属性
+    for (var _key2 in props) {
+      if (_key2 === 'style') {
         for (var styleName in props.style) {
           el.style[styleName] = props.style[styleName];
         }
       } else {
-        el.setAttribute(key, props[key]);
+        el.setAttribute(_key2, props[_key2]);
       }
     }
   }
@@ -846,7 +865,7 @@
       vNode.el = document.createElement(tag);
 
       // 更新属性
-      patchProps(vNode.el, data);
+      patchProps(vNode.el, {}, data);
       children.forEach(function (child) {
         var childElm = createElm(child);
         vNode.el.appendChild(childElm);
@@ -870,18 +889,33 @@
       return newElm;
     } else {
       console.log('TODO diff 算法');
-      console.log(oldVNode, vNode);
+      patchVNode(oldVNode, vNode);
       // 1. 两个节点不是同一个节点，直接删除老的上的新的（没有比对了)
       // 2. 两个节点是同一个节点（判断节点的 tag 和节点的 key)比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
       // 3. 节点比较完成后 ，就需要比较两个人的儿子
-
-      if (!isSameVNode(oldVNode, vNode)) {
-        // 用老节点的父亲节点进行替换
-        var el = createElm(vNode);
-        oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
-        return el;
+    }
+  }
+  function patchVNode(oldVNode, vNode) {
+    if (!isSameVNode(oldVNode, vNode)) {
+      // 用老节点的父亲节点进行替换
+      var _el = createElm(vNode);
+      oldVNode.el.parentNode.replaceChild(_el, oldVNode.el);
+      return _el;
+    }
+    console.log(oldVNode.tag, vNode.el, 222222222);
+    // -------------接下来就是相同的节点----------------------
+    var el = vNode.el = oldVNode.el; // 复用老节点的元素
+    // 文本的情况，文本我们期望比较一下文本的内容
+    if (!oldVNode.tag) {
+      // 是文本
+      if (oldVNode.text !== vNode.text) {
+        oldVNode.el.textContent = vNode.text; // 用新的节点覆盖掉老的节点
       }
     }
+    // 是标签，我们需要比对标签的属性
+    console.log(oldVNode, vNode);
+    patchProps(el, oldVNode.data, vNode.data);
+    return el;
   }
 
   function mountComponent(vm, el) {
@@ -1059,7 +1093,7 @@
   initStateMixin(Vue); // 实现了 $nextTick $watch
 
   // 为了方便观察前后的虚拟节点，测试的
-  var render1 = compileToFunction("<li style=\"color:red;\" key=\"a\">{{name}}</li>");
+  var render1 = compileToFunction("<li key=\"a\" a=\"1\" style=\"color: red\">{{name}}</li>");
   var vm1 = new Vue({
     data: {
       name: '珠峰'
@@ -1069,7 +1103,7 @@
   console.log(prevVNode);
   var el1 = createElm(prevVNode);
   document.body.appendChild(el1);
-  var render2 = compileToFunction("<span style=\"color:red;background-color: blue\" key=\"a\">{{name}}</span>");
+  var render2 = compileToFunction("<li key=\"a\" a=\"1\" b=\"2\" style=\"color:white;background-color: blue\">{{name}}+111</li>");
   var vm2 = new Vue({
     data: {
       name: '珠峰2'
