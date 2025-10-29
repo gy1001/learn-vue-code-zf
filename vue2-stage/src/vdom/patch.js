@@ -91,5 +91,34 @@ function patchVNode(oldVNode, vNode) {
   console.log(oldVNode, vNode)
   patchProps(el, oldVNode.data, vNode.data)
 
+  // 接下来比较儿子节点
+  // 1. 一方有儿子，一方没有儿子
+  // 2. 两方都有儿子
+
+  const oldChildren = oldVNode.children || []
+  const newChildren = vNode.children || []
+  console.log(oldChildren, newChildren)
+  if (oldChildren.length > 0 && newChildren.length > 0) {
+    // 完整的 diff 算法。比较两方的儿子
+  } else if (newChildren.length > 0) {
+    // 老节点没有儿子，新节点有儿子
+    mountChildren(el, newChildren)
+  } else if (oldChildren.length > 0) {
+    // 老节点有儿子，新节点没有儿子
+    unMountChildren(el, oldChildren)
+  }
   return el
+}
+
+function mountChildren(el, children) {
+  for (let i = 0; i < children.length; i++) {
+    const childEl = createElm(children[i])
+    el.appendChild(childEl)
+  }
+}
+
+function unMountChildren(el, oldChildren) {
+  for (let i = 0; i < oldChildren.length; i++) {
+    oldChildren[i].el.remove()
+  }
 }

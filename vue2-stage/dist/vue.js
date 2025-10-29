@@ -915,7 +915,33 @@
     // 是标签，我们需要比对标签的属性
     console.log(oldVNode, vNode);
     patchProps(el, oldVNode.data, vNode.data);
+
+    // 接下来比较儿子节点
+    // 1. 一方有儿子，一方没有儿子
+    // 2. 两方都有儿子
+
+    var oldChildren = oldVNode.children || [];
+    var newChildren = vNode.children || [];
+    console.log(oldChildren, newChildren);
+    if (oldChildren.length > 0 && newChildren.length > 0) ; else if (newChildren.length > 0) {
+      // 老节点没有儿子，新节点有儿子
+      mountChildren(el, newChildren);
+    } else if (oldChildren.length > 0) {
+      // 老节点有儿子，新节点没有儿子
+      unMountChildren(el, oldChildren);
+    }
     return el;
+  }
+  function mountChildren(el, children) {
+    for (var i = 0; i < children.length; i++) {
+      var childEl = createElm(children[i]);
+      el.appendChild(childEl);
+    }
+  }
+  function unMountChildren(el, oldChildren) {
+    for (var i = 0; i < oldChildren.length; i++) {
+      oldChildren[i].el.remove();
+    }
   }
 
   function mountComponent(vm, el) {
@@ -1093,7 +1119,7 @@
   initStateMixin(Vue); // 实现了 $nextTick $watch
 
   // 为了方便观察前后的虚拟节点，测试的
-  var render1 = compileToFunction("<li key=\"a\" a=\"1\" style=\"color: red\">{{name}}</li>");
+  var render1 = compileToFunction("<li key=\"a\" a=\"1\" style=\"color: red\">{{name}}+111</li>");
   var vm1 = new Vue({
     data: {
       name: '珠峰'
@@ -1103,7 +1129,7 @@
   console.log(prevVNode);
   var el1 = createElm(prevVNode);
   document.body.appendChild(el1);
-  var render2 = compileToFunction("<li key=\"a\" a=\"1\" b=\"2\" style=\"color:white;background-color: blue\">{{name}}+111</li>");
+  var render2 = compileToFunction("<li key=\"a\" a=\"1\" b=\"2\" style=\"color:white;background-color: blue\"></li>");
   var vm2 = new Vue({
     data: {
       name: '珠峰2'

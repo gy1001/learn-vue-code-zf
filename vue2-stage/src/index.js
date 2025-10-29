@@ -16,7 +16,7 @@ initStateMixin(Vue) // 实现了 $nextTick $watch
 
 // 为了方便观察前后的虚拟节点，测试的
 let render1 = compileToFunction(
-  `<li key="a" a="1" style="color: red">{{name}}</li>`,
+  `<li key="a" a="1" style="color: red">{{name}}+111</li>`,
 )
 const vm1 = new Vue({ data: { name: '珠峰' } })
 const prevVNode = render1.call(vm1)
@@ -25,7 +25,7 @@ const el1 = createElm(prevVNode)
 document.body.appendChild(el1)
 
 let render2 = compileToFunction(
-  `<li key="a" a="1" b="2" style="color:white;background-color: blue">{{name}}+111</li>`,
+  `<li key="a" a="1" b="2" style="color:white;background-color: blue"></li>`,
 )
 const vm2 = new Vue({ data: { name: '珠峰2' } })
 const nextVNode = render2.call(vm2)
