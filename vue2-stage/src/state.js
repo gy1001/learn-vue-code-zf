@@ -1,5 +1,5 @@
 import { observe } from './observe/index'
-import { Watcher } from './observe/watcher'
+import { nextTick, Watcher } from './observe/watcher'
 import Dep from './observe/dep'
 
 export function initState(vm) {
@@ -115,4 +115,19 @@ function proxy(vm, target, key) {
       vm[target][key] = val
     },
   })
+}
+
+export function initStateMixin(Vue) {
+  Vue.prototype.$nextTick = nextTick
+
+  // 最终调用的都是这个方法
+  Vue.prototype.$watch = function (exprOrFn, cb) {
+    // 参数：{deep: true, immediate: true} // 先不处理了
+    // console.log(exprOrFn, cb)
+    // exprOrFn 可能是字符串，有可能是函数 firstName ,() => vm.firstName
+    // new Watcher(this)
+
+    // firstName的值变化了，直接执行 cb
+    new Watcher(this, exprOrFn, { user: true }, cb)
+  }
 }

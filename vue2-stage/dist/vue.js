@@ -565,6 +565,22 @@
       }
     });
   }
+  function initStateMixin(Vue) {
+    Vue.prototype.$nextTick = nextTick;
+
+    // 最终调用的都是这个方法
+    Vue.prototype.$watch = function (exprOrFn, cb) {
+      // 参数：{deep: true, immediate: true} // 先不处理了
+      // console.log(exprOrFn, cb)
+      // exprOrFn 可能是字符串，有可能是函数 firstName ,() => vm.firstName
+      // new Watcher(this)
+
+      // firstName的值变化了，直接执行 cb
+      new Watcher(this, exprOrFn, {
+        user: true
+      }, cb);
+    };
+  }
 
   var unicodeRegExp = /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD/;
   // unicodeRegExp.source 用于拿到正则表达式 unicodeRegExp 的字符串。
@@ -696,18 +712,20 @@
   }
 
   function genProps(attrs) {
-    var str = ""; // {name, value}
+    var str = ''; // {name, value}
     var _loop = function _loop() {
       var attr = attrs[i];
-      if (attr.name === "style") {
+      if (attr.name === 'style') {
         // color: 'red' => {color: 'red'}
         var obj = {};
-        attr.value.split(";").forEach(function (item) {
-          var _item$split = item.split(":"),
-            _item$split2 = _slicedToArray(_item$split, 2),
-            key = _item$split2[0],
-            value = _item$split2[1];
-          obj[key] = value.trim();
+        attr.value.split(';').forEach(function (item) {
+          if (item) {
+            var _item$split = item.split(':'),
+              _item$split2 = _slicedToArray(_item$split, 2),
+              key = _item$split2[0],
+              value = _item$split2[1];
+            obj[key] = value.trim();
+          }
         });
         attr.value = obj;
       }
@@ -750,17 +768,17 @@
       if (lastIndex < nodeText.length) {
         tokens.push(JSON.stringify(nodeText.slice(lastIndex, nodeText.length)));
       }
-      return "_v(".concat(tokens.join("+"), ")");
+      return "_v(".concat(tokens.join('+'), ")");
     }
   }
   function genChildren(children) {
     return children.map(function (child) {
       return genChild(child);
-    }).join(",");
+    }).join(',');
   }
   function codegen(ast) {
     var children = genChildren(ast.children);
-    var code = "_c('".concat(ast.tag, "', ").concat(ast.attrs.length > 0 ? genProps(ast.attrs) : "null", ", ").concat(ast.children.length ? "".concat(children) : "", ")");
+    var code = "_c('".concat(ast.tag, "', ").concat(ast.attrs.length > 0 ? genProps(ast.attrs) : 'null', ", ").concat(ast.children.length ? "".concat(children) : '', ")");
     return code;
   }
   function compileToFunction(template) {
@@ -792,7 +810,7 @@
     for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
       children[_key - 3] = arguments[_key];
     }
-    console.log("children", children);
+    console.log('children', children);
     var key = props === null || props === void 0 ? void 0 : props.key;
     props === null || props === void 0 || delete props.key;
     return vNode(vm, tag, key, props, children);
@@ -802,50 +820,10 @@
   function createTextVNode(vm, text) {
     return vNode(vm, undefined, undefined, undefined, undefined, text);
   }
-
-  function mountComponent(vm, el) {
-    vm.$el = el;
-    // 1. 调用 render 方法产生虚拟节点 虚拟 DOM
-    // vm._update(vm._render()); // vm.$options.render() 虚拟节点
-
-    var updateComponent = function updateComponent() {
-      vm._update(vm._render());
-    };
-    new Watcher(vm, updateComponent, true); // true 用于标识这是一个渲染 watcher
-
-    // 2. 根据虚拟 DOM 产生真是 DOM
-    // 3. 插入到 el 元素中
+  function isSameVNode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   }
-  function initLifeCycle(Vue) {
-    Vue.prototype._c = function () {
-      console.log('调用了 _c');
-      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
-    };
-    Vue.prototype._v = function () {
-      console.log('调用了 _v');
-      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
-    };
-    Vue.prototype._s = function (value) {
-      console.log('调用了 _s');
-      if (_typeof(value) !== 'object') {
-        return value;
-      }
-      return JSON.stringify(value);
-    };
-    Vue.prototype._update = function (vNode) {
-      console.log('_update');
-      var vm = this;
-      var el = vm.$el;
-      // patch 既有初始化的功能，又有更新的公共功能
-      // 创建或者更新完毕后，返回的节点赋值给实例上，更新实例上的节点
-      vm.$el = patch(el, vNode);
-    };
-    Vue.prototype._render = function () {
-      console.log('_render');
-      var vm = this;
-      return vm.$options.render.call(vm); // 通过 ast 语法转义后生成的 render 方法
-    };
-  }
+
   function patchProps(el, props) {
     for (var key in props) {
       if (key === 'style') {
@@ -892,7 +870,62 @@
       return newElm;
     } else {
       console.log('TODO diff 算法');
+      console.log(oldVNode, vNode);
+      // 1. 两个节点不是同一个节点，直接删除老的上的新的（没有比对了)
+      // 2. 两个节点是同一个节点（判断节点的 tag 和节点的 key)比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
+      // 3. 节点比较完成后 ，就需要比较两个人的儿子
+
+      if (!isSameVNode(oldVNode, vNode)) {
+        // 用老节点的父亲节点进行替换
+        var el = createElm(vNode);
+        oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
+        return el;
+      }
     }
+  }
+
+  function mountComponent(vm, el) {
+    vm.$el = el;
+    // 1. 调用 render 方法产生虚拟节点 虚拟 DOM
+    // vm._update(vm._render()); // vm.$options.render() 虚拟节点
+
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+    new Watcher(vm, updateComponent, true); // true 用于标识这是一个渲染 watcher
+
+    // 2. 根据虚拟 DOM 产生真是 DOM
+    // 3. 插入到 el 元素中
+  }
+  function initLifeCycle(Vue) {
+    Vue.prototype._c = function () {
+      console.log('调用了 _c');
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+    Vue.prototype._v = function () {
+      console.log('调用了 _v');
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+    Vue.prototype._s = function (value) {
+      console.log('调用了 _s');
+      if (_typeof(value) !== 'object') {
+        return value;
+      }
+      return JSON.stringify(value);
+    };
+    Vue.prototype._update = function (vNode) {
+      console.log('_update');
+      var vm = this;
+      var el = vm.$el;
+      // patch 既有初始化的功能，又有更新的公共功能
+      // 创建或者更新完毕后，返回的节点赋值给实例上，更新实例上的节点
+      vm.$el = patch(el, vNode);
+    };
+    Vue.prototype._render = function () {
+      console.log('_render');
+      var vm = this;
+      return vm.$options.render.call(vm); // 通过 ast 语法转义后生成的 render 方法
+    };
   }
   function callHook(vm, hook) {
     var handlers = vm.$options[hook];
@@ -1020,23 +1053,39 @@
     // options 就是用户的选项
     this._init(options);
   }
-  Vue.prototype.$nextTick = nextTick;
-  initMixin(Vue);
-  initLifeCycle(Vue);
-  initGlobalApi(Vue);
+  initMixin(Vue); // 扩展了 init 方法，
+  initLifeCycle(Vue); // vm._update vm._render
+  initGlobalApi(Vue); // 全局 api 的实现
+  initStateMixin(Vue); // 实现了 $nextTick $watch
 
-  // 最终调用的都是这个方法
-  Vue.prototype.$watch = function (exprOrFn, cb) {
-    // 参数：{deep: true, immediate: true} // 先不处理了
-    // console.log(exprOrFn, cb)
-    // exprOrFn 可能是字符串，有可能是函数 firstName ,() => vm.firstName
-    // new Watcher(this)
+  // 为了方便观察前后的虚拟节点，测试的
+  var render1 = compileToFunction("<li style=\"color:red;\" key=\"a\">{{name}}</li>");
+  var vm1 = new Vue({
+    data: {
+      name: '珠峰'
+    }
+  });
+  var prevVNode = render1.call(vm1);
+  console.log(prevVNode);
+  var el1 = createElm(prevVNode);
+  document.body.appendChild(el1);
+  var render2 = compileToFunction("<span style=\"color:red;background-color: blue\" key=\"a\">{{name}}</span>");
+  var vm2 = new Vue({
+    data: {
+      name: '珠峰2'
+    }
+  });
+  var nextVNode = render2.call(vm2);
+  console.log(nextVNode);
+  createElm(nextVNode);
 
-    // firstName的值变化了，直接执行 cb
-    new Watcher(this, exprOrFn, {
-      user: true
-    }, cb);
-  };
+  // 之前的做法：直接将新的节点替换掉老的
+  // 优化做法：不是直接替换，而是标记两个节点的区别之后再去替换
+  // diff 算法是一个平级比较的过程，父亲和父亲比较，儿子和儿子比较
+  setTimeout(function () {
+    // el1.parentNode.replaceChild(el2, el1)
+    patch(prevVNode, nextVNode);
+  }, 1000);
 
   return Vue;
 

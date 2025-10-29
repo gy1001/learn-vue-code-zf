@@ -1,5 +1,6 @@
 import { createElementVNode, createTextVNode } from './vdom/index'
 import { Watcher } from './observe/watcher'
+import { patch } from './vdom/patch'
 
 export function mountComponent(vm, el) {
   vm.$el = el
@@ -47,53 +48,6 @@ export function initLifeCycle(Vue) {
     console.log('_render')
     const vm = this
     return vm.$options.render.call(vm) // 通过 ast 语法转义后生成的 render 方法
-  }
-}
-
-function patchProps(el, props) {
-  for (const key in props) {
-    if (key === 'style') {
-      for (const styleName in props.style) {
-        el.style[styleName] = props.style[styleName]
-      }
-    } else {
-      el.setAttribute(key, props[key])
-    }
-  }
-}
-
-function createElm(vNode) {
-  const { tag, children = [], data, text } = vNode
-  if (typeof tag === 'string') {
-    // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
-    vNode.el = document.createElement(tag)
-
-    // 更新属性
-    patchProps(vNode.el, data)
-    children.forEach((child) => {
-      const childElm = createElm(child)
-      vNode.el.appendChild(childElm)
-    })
-  } else {
-    vNode.el = document.createTextNode(text)
-  }
-  return vNode.el
-}
-
-function patch(oldVNode, vNode) {
-  // 写的是初渲染流程
-  const isRealElement = oldVNode.nodeType
-  if (isRealElement) {
-    console.log('这里进行渲染了')
-    const elm = oldVNode // 获取真实元素
-    const parentElm = elm.parentNode // 获取父元素
-    const newElm = createElm(vNode)
-    parentElm.insertBefore(newElm, elm.nextSibling)
-    // 移除老节点
-    parentElm.removeChild(elm)
-    return newElm
-  } else {
-    console.log('TODO diff 算法')
   }
 }
 

@@ -8,18 +8,22 @@ function vNode(vm, tag, key, data, children, text) {
     children,
     text,
     key,
-  };
+  }
 }
 
 // h() _c()
 export function createElementVNode(vm, tag, props = {}, ...children) {
-  console.log("children", children);
-  const key = props?.key;
-  delete props?.key;
-  return vNode(vm, tag, key, props, children);
+  console.log('children', children)
+  const key = props?.key
+  delete props?.key
+  return vNode(vm, tag, key, props, children)
 }
 
 // _v()
 export function createTextVNode(vm, text) {
-  return vNode(vm, undefined, undefined, undefined, undefined, text);
+  return vNode(vm, undefined, undefined, undefined, undefined, text)
+}
+
+export function isSameVNode(vnode1, vnode2) {
+  return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key
 }
