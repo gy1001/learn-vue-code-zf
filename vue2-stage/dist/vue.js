@@ -824,7 +824,9 @@
     return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   }
 
-  function patchProps(el, oldProps, props) {
+  function patchProps(el) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     // 老的属性，在新的属性占用没有，要进行删除
     var oldStyles = oldProps.style || {};
     var newStyles = props.style || {};
@@ -889,7 +891,7 @@
       return newElm;
     } else {
       console.log('TODO diff 算法');
-      patchVNode(oldVNode, vNode);
+      return patchVNode(oldVNode, vNode);
       // 1. 两个节点不是同一个节点，直接删除老的上的新的（没有比对了)
       // 2. 两个节点是同一个节点（判断节点的 tag 和节点的 key)比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
       // 3. 节点比较完成后 ，就需要比较两个人的儿子
@@ -902,9 +904,9 @@
       oldVNode.el.parentNode.replaceChild(_el, oldVNode.el);
       return _el;
     }
-    console.log(oldVNode.tag, vNode.el, 222222222);
     // -------------接下来就是相同的节点----------------------
     var el = vNode.el = oldVNode.el; // 复用老节点的元素
+
     // 文本的情况，文本我们期望比较一下文本的内容
     if (!oldVNode.tag) {
       // 是文本
@@ -913,7 +915,6 @@
       }
     }
     // 是标签，我们需要比对标签的属性
-    console.log(oldVNode, vNode);
     patchProps(el, oldVNode.data, vNode.data);
 
     // 接下来比较儿子节点
@@ -922,8 +923,10 @@
 
     var oldChildren = oldVNode.children || [];
     var newChildren = vNode.children || [];
-    console.log(oldChildren, newChildren);
-    if (oldChildren.length > 0 && newChildren.length > 0) ; else if (newChildren.length > 0) {
+    if (oldChildren.length > 0 && newChildren.length > 0) {
+      // 完整的 diff 算法。比较两方的儿子
+      updateChildren(el, oldChildren, newChildren);
+    } else if (newChildren.length > 0) {
       // 老节点没有儿子，新节点有儿子
       mountChildren(el, newChildren);
     } else if (oldChildren.length > 0) {
@@ -942,6 +945,104 @@
     for (var i = 0; i < oldChildren.length; i++) {
       oldChildren[i].el.remove();
     }
+  }
+  function updateChildren(el, oldChildren, newChildren) {
+    // 我们操作列表时候，经常是会有 push shift pop unshift revers sort 这些方法（针对这些情况做一个优化）
+    // vue2 中采用双指针的方法，比较两个节点
+
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var newEndIndex = newChildren.length - 1;
+    var newStartVNode = newChildren[newStartIndex];
+    var oldStartVNode = oldChildren[oldStartIndex];
+    var newEndVNode = newChildren[newEndIndex];
+    var oldEndVNode = oldChildren[oldEndIndex];
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (child, index) {
+        map[child.key] = index;
+      });
+      return map;
+    }
+    var oldChildrenKeyMap = makeIndexByKey(oldChildren);
+    console.log(oldChildrenKeyMap);
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      // 双方有一方头指针索引，大于尾部指针索引就停止循环（必须同时满足）
+      // 我们为了比较两个儿子的时候提高比较性能，会采取一些策略
+      if (!oldStartVNode) {
+        oldStartVNode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVNode) {
+        oldEndVNode = oldChildren[++oldEndIndex];
+      } else if (isSameVNode(oldStartVNode, newStartVNode)) {
+        // 如果是相同节点，则递归比较子节点
+        patchVNode(oldStartVNode, newStartVNode);
+        // 然后双方头指针后移
+        oldStartVNode = oldChildren[++oldStartIndex];
+        newStartVNode = newChildren[++newStartIndex];
+        // 比较开头节点
+      } else if (isSameVNode(oldEndVNode, newEndVNode)) {
+        patchVNode(oldEndVNode, newEndVNode);
+        oldEndVNode = oldChildren[--oldEndIndex];
+        newEndVNode = newChildren[--newEndIndex];
+      } else if (isSameVNode(oldEndVNode, newStartVNode)) {
+        console.log('3️⃣旧后与新前进行比较');
+        // 开始交叉比对
+        patchVNode(oldEndVNode, newStartVNode);
+        // 把旧后节点移动到旧前节点前面
+        el.insertBefore(oldEndVNode.el, oldStartVNode.el);
+        oldEndVNode = oldChildren[--oldEndIndex];
+        newStartVNode = newChildren[++newStartIndex];
+      } else if (isSameVNode(oldStartVNode, newEndVNode)) {
+        // 开始交叉比对
+        console.log('4️⃣旧前与新后进行比较');
+        patchVNode(oldStartVNode, newEndVNode);
+        // 把旧前节点移动到旧后节点后面
+        el.insertBefore(oldStartVNode.el, oldEndVNode.el.nextSibling);
+        oldStartVNode = oldChildren[++oldStartIndex];
+        newEndVNode = newChildren[--newEndIndex];
+      } else {
+        console.log('5️⃣乱序比较');
+        // 乱序比较：
+        // 根据老的列表做一个映射关系，用新的去找，找到则移动，找不到则添加，最后多余的进行删除
+        var moveIndex = oldChildrenKeyMap[newStartVNode.key];
+        if (moveIndex !== undefined) {
+          // 找到当前需要移动的元素
+          var currentMoveVNode = oldChildren[moveIndex]; // 找到需要移动的虚拟节点 复用
+          el.insertBefore(currentMoveVNode.el, oldStartVNode.el);
+          // 并且清空当前老节点的元素
+          oldChildren[moveIndex] = undefined; // 标识这个节点已经移走了
+          // 并且要对当前新节点 和找到的那个节点进行属性更新 patchVNode
+          patchVNode(currentMoveVNode, newStartVNode);
+        } else {
+          // 如果找不到
+          el.insertBefore(createElm(newStartVNode), oldStartVNode.el);
+        }
+        // 移动指针
+        newStartVNode = newChildren[++newStartIndex];
+      }
+      // 再给动态列表添加 key 的时候，要尽量避免使用索引，因为索引新旧节点都是从 0开始的，可能会发生错误复用
+    }
+    if (newStartIndex <= newEndIndex) {
+      // 新的节点有新增的，对多余的就插入进入
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        // 这里可能是向后追加，也可能是向前追加
+        // el.appendChild(createElm(newChildren[i]))
+
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; // 获取下一个元素，可能不存在,可能存在，当做一个参照物
+        el.insertBefore(createElm(newChildren[i]), anchor); // 当anchor为null时候,则会认为是 appendChild
+      }
+    }
+    if (oldStartIndex <= oldEndIndex) {
+      // 旧的节点有多余的，需要删除老的节点
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        if (oldChildren[_i]) {
+          el.removeChild(oldChildren[_i].el);
+        }
+      }
+    }
+
+    // 如果批量向页面中修改插入内容，浏览器会自动优化的
   }
 
   function mountComponent(vm, el) {
@@ -1119,24 +1220,22 @@
   initStateMixin(Vue); // 实现了 $nextTick $watch
 
   // 为了方便观察前后的虚拟节点，测试的
-  var render1 = compileToFunction("<li key=\"a\" a=\"1\" style=\"color: red\">{{name}}+111</li>");
+  var render1 = compileToFunction("<ul key=\"a\" a=\"1\" style=\"color: red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n</ul>");
   var vm1 = new Vue({
     data: {
       name: '珠峰'
     }
   });
   var prevVNode = render1.call(vm1);
-  console.log(prevVNode);
   var el1 = createElm(prevVNode);
   document.body.appendChild(el1);
-  var render2 = compileToFunction("<li key=\"a\" a=\"1\" b=\"2\" style=\"color:white;background-color: blue\"></li>");
+  var render2 = compileToFunction("<ul key=\"a\" a=\"1\" b=\"2\" style=\"color:white;background-color: blue\">\n   <li key=\"b\">b</li>\n   <li key=\"m\">m</li>\n   <li key=\"q\">a</li> \n   <li key=\"p\">p</li>\n   <li key=\"c\">c</li>\n   <li key=\"q\">q</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: '珠峰2'
     }
   });
   var nextVNode = render2.call(vm2);
-  console.log(nextVNode);
   createElm(nextVNode);
 
   // 之前的做法：直接将新的节点替换掉老的
