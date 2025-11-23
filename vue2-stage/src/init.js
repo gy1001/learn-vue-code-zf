@@ -32,29 +32,33 @@ export function initMixin(Vue) {
   // 挂载
   Vue.prototype.$mount = function (el) {
     const vm = this
-    el = document.querySelector(el)
+    // 1. 处理 el：支持传入选择器字符串或 DOM 元素，最终转为 DOM 元素
+    el = el && document.querySelector(el)
     const ops = vm.$options
+    // 2. 模板优先级：render > template > el.innerHTML（核心修复点）
     if (!ops.render) {
-      let template
-      // 先进行查找是否有 render 函数，
-      // 没有 render 函数看一下是否写了 template 没有写 template 就用外部的 template
-      if (!ops.template && el) {
-        // 没有写模板，但是写了 el
-        template = el.outerHTML
-      } else {
-        if (el) {
-          template = ops.template
-        }
-      }
-      // console.log(template);
+      // 优先判断是否有 render 函数（最高优先级）
+      let template = ops.template // 先读取用户配置的 template 选项
       if (template) {
-        // 这里需要对模板进行编译
-        ops.render = compileToFunction(template) // jsx 最终也会被被编译成 h('xxx')
+        // 若有 template 选项，直接用（支持字符串模板）
+      } else if (el) {
+        // 若无 template，fallback 到 el 的 innerHTML 作为模板（而非 outerHTML）
+        template = el.innerHTML
+      }
+      // 3. 若有模板（无论是用户配置的还是 el 内部的），编译为 render 函数
+      if (template) {
+        ops.render = compileToFunction(template)
       }
     }
-    // 最终可以获取到 render 方法
-    // console.log(ops.render);
-    mountComponent(vm, el) // 组件的挂载
+
+    // 4. 执行组件挂载（核心逻辑，不变）
+    mountComponent(vm, el)
+    return this // 链式调用支持
+
+    // script 标签使用的 vue.global.js 这个编译过程是在浏览器中运行的
+    // runtime 是不包含模板编译的，整个编译过程是打包的过程中和通过 loader 来转译 .vue 文件，用runtime 的时候不能使用 template 属性
+
+    // 最终就可以获取 render 函数
   }
 }
 

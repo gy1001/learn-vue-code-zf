@@ -1,5 +1,9 @@
 import { isSameVNode } from './index'
 
+export const isReservedTag = (tag) => {
+  return ['a', 'div', 'p', 'h1', 'span', 'button'].includes(tag)
+}
+
 export function patchProps(el, oldProps = {}, props = {}) {
   // 老的属性，在新的属性占用没有，要进行删除
   const oldStyles = oldProps.style || {}
@@ -31,9 +35,24 @@ export function patchProps(el, oldProps = {}, props = {}) {
   }
 }
 
+function createComponent(vNode) {
+  let i = vNode.data
+  if ((i = i.hook) && (i = i.init)) {
+    // 如果 i.hook.init 上面有值，说明是组件
+    i(vNode) //初始化节点
+  }
+  // 如果 vNode.componentInstance 说明是组件
+  return vNode.componentInstance
+}
+
+// 创建真实节点：这里要区分是组件还是元素
 export function createElm(vNode) {
   const { tag, children = [], data, text } = vNode
   if (typeof tag === 'string') {
+    if (createComponent(vNode)) {
+      // 组件, 这里执行通过后，vNode.componentInstance 身上就有一个 $el
+      return vNode.componentInstance.$el // 这里父组件循环时候，最终会在下面被 appendChild 到父节点中
+    }
     // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
     vNode.el = document.createElement(tag)
 
@@ -50,6 +69,10 @@ export function createElm(vNode) {
 }
 
 export function patch(oldVNode, vNode) {
+  // 如果是自定义组件，oldVNode 就是空的
+  if (!oldVNode) {
+    return createElm(vNode)
+  }
   // 写的是初渲染流程
   const isRealElement = oldVNode.nodeType
   if (isRealElement) {

@@ -41,7 +41,17 @@ export function initLifeCycle(Vue) {
     const el = vm.$el
     // patch 既有初始化的功能，又有更新的公共功能
     // 创建或者更新完毕后，返回的节点赋值给实例上，更新实例上的节点
-    vm.$el = patch(el, vNode)
+    // vm.$el = patch(el, vNode)
+
+    //--------更改如下
+    const prevVNode = vm._vnode
+    vm._vnode = vNode // 把组件第一次产生的虚拟节点保存到 _vnode 上
+    if (prevVNode) {
+      // 说明之前渲染过了
+      vm.$el = patch(prevVNode, vNode)
+    } else {
+      vm.$el = patch(el, vNode)
+    }
   }
 
   Vue.prototype._render = function () {

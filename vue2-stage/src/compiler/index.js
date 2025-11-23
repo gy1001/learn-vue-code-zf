@@ -62,7 +62,7 @@ function genChildren(children) {
 
 function codegen(ast) {
   const children = genChildren(ast.children)
-  let code = `_c('${ast.tag}', ${ast.attrs.length > 0 ? genProps(ast.attrs) : 'null'}, ${ast.children.length ? `${children}` : ''})`
+  let code = `_c('${ast.tag}', ${ast.attrs.length > 0 ? genProps(ast.attrs) : '{}'}, ${ast.children.length ? `${children}` : ''})`
   return code
 }
 

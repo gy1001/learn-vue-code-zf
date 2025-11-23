@@ -18,6 +18,20 @@ LIFE_CYCLE.forEach((cycle) => {
     }
   }
 })
+
+strats.components = function (parentVal, childVal) {
+  const result = Object.create(parentVal)
+  if (childVal) {
+    for (let key in childVal) {
+      // 返回的是构造的对象，可以拿到父亲原型上的属性，
+      // 并且将儿子的都拷贝到自己身上
+      result[key] = childVal[key]
+    }
+  }
+
+  return result
+}
+
 export function mergeOptions(parent, child) {
   console.log(parent, child, 'parent, child')
   function mergeField(key) {

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+        name="viewport">
+  <meta content="ie=edge" http-equiv="X-UA-Compatible">
+  <title>component 组件渲染</title>
+</head>
+<body>
+<div id="app">
+  <div id="app1"></div>
+</div>
+</body>
+<!--<script src="../dist/libs/vue/2.6.14/vue.js"></script>-->
+<script src="../dist/vue.js"></script>
+<script>
+  // 根实例，
+  // 组件的三大特性：自定义标签、组件里面有自己的属性和事件、组件的插槽（webcomponent）
+  //
+  // 两种方式：全局组件、局部组件
+  Vue.component('my-button', {
+    template: `<button>全局my-button点我呀</button>`
+  })
+
+  // 在处理属性的时候，要维护一下，
+  // components: {my-button}
+  // 如果没有，就去往上找
+
+  // Vue.extend
+  let mySub = Vue.extend({
+    template: `
+      <div id="mine">
+        <span>我是 vue.extend 创建的</span>
+        <my-button></my-button>
+      </div>`,
+    components: {
+      'my-button': {
+        template: `<button>局部组件-点我</button>`
+      }
+    }
+  })
+
+  // 挂载
+  new mySub().$mount('#app1')
+
+
+  // const vm = new Vue({
+  //   el: '#app',
+  //   data() {
+  //     return {
+  //       name: 'app',
+  //     }
+  //   },
+  //   // 局部组件
+  //   components: {
+  //     // 有点像 js 的原型链，找不到局部的，再往上找全局的
+  //     // 可以理解为：内部可能是一个继承的模型
+  //     'my-button': {
+  //       template: `<button>inner-button点我呀</button>`
+  //     }
+  //   }
+  // })
+  setTimeout(() => {
+    // vm.name = "猪八戒"
+  }, 2000)
+</script>
+</html>
