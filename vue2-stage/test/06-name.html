@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+        name="viewport">
+  <meta content="ie=edge" http-equiv="X-UA-Compatible">
+  <title>name的用法</title>
+</head>
+<body>
+<div id="app">
+  <my1 @handler="handler"></my1>
+</div>
+</body>
+<script src="../dist/libs/vue/2.6.14/vue.js"></script>
+<script>
+  Vue.prototype.$dispatch = function (componentName, handlerName, data) {
+    let vm = this
+    while (vm) {
+      if (vm.$options.name === componentName) {
+        // vm[handler](data)
+        vm.$emit(handlerName, data)
+        break
+      }
+      vm = vm.$parent
+    }
+  }
+
+  Vue.prototype.$broadcast = function (componentName, handlerName, data) {
+    let components = []
+    let vm = this
+
+    function findChildren(children) {
+      children.forEach(child => {
+        if (child.$options.name === componentName) {
+          components.push(child)
+        }
+        findChildren(child.$children || [])
+      })
+    }
+
+    findChildren(vm.$children)
+    components.forEach(child => {
+      child[handlerName](data)
+    })
+  }
+
+  Vue.component('my3', {
+    template: `
+      <div> my3</div>`,
+    name: 'my3',
+    mounted() {
+      // 可以在此不停的向上查找
+      this.$dispatch("my1", 'handler', "我是 my3 调用传递的参数")
+    },
+    methods: {
+      handler: function (data) {
+        console.log("我是 my3中的方法，接收到的参数为：" + data)
+      }
+    }
+  })
+  Vue.component('my2', {
+    template: `<div> my2 <my3></my3></div>`,
+    name: 'my2',
+  })
+  Vue.component('my1', {
+    template: `<div> my1<my2></my2></div>`,
+    name: 'my1',
+    mounted() {
+      console.log('-----my1 挂载了 ------')
+      this.$broadcast('my3', 'handler', "我是my1传递的")
+    }
+  })
+  new Vue({
+    el: '#app',
+    methods: {
+      handler(data) {
+        console.log("my1 中的 methods 中的 handler方法，接收到的参数为：", data)
+      }
+    }
+  })
+</script>
+</html>
