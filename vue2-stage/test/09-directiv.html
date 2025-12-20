@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+        name="viewport">
+  <meta content="ie=edge" http-equiv="X-UA-Compatible">
+  <title>09-directive</title>
+</head>
+<body>
+<div id="app">
+  <div v-my="abc"></div>
+</div>
+</body>
+<script src="../dist/libs/vue/2.6.14/vue.js"></script>
+<script>
+  import Vue from "../src";
+
+  Vue.directive('my', {
+    bind(el, binding) {
+
+    },
+    inserted(el, binding) {
+      
+    }
+  })
+  new Vue({
+    el: '#app',
+  })
+</script>
+</html>
