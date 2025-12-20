@@ -5,7 +5,10 @@ import router from './router'
 import store from './store'
 // 在项目入口文件引入
 import 'lib-flexible/flexible'
+import Vant from 'vant';
+import 'vant/lib/index.css';
 
+Vue.use(Vant);
 Vue.config.productionTip = false
 
 new Vue({

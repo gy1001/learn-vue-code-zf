@@ -16,16 +16,18 @@ module.exports = defineConfig({
   css: {
     loaderOptions: {
       postcss: {
-        plugins: [
-          require("postcss-plugin-px2rem")({
-            rootValue: 75, // 设计稿宽度/10，如750设计稿就是75
-            propList: ['*'], // 需要转换的属性，*表示所有
-            selectorBlackList: [], // 不转换的选择器
-            replace: true,
-            mediaQuery: false,
-            minPixelValue: 0
-          })
-        ]
+        postcssOptions: {
+          plugins: [
+            require("postcss-plugin-px2rem")({
+              rootValue: 37.5, // 设计稿宽度/10，如750设计稿就是75
+              propList: ['*'], // 需要转换的属性，*表示所有
+              selectorBlackList: [], // 不转换的选择器
+              replace: true,
+              mediaQuery: false,
+              minPixelValue: 0
+            })
+          ]
+        }
       }
     }
   }
