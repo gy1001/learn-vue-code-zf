@@ -18,7 +18,7 @@ pnpm install rollup @rollup/plugin-babel @babel/core @babel/preset-env --save-de
 import babel from 'rollup-plugin-babel'
 
 export default {
-  input: './src/index.js', // 入口
+  input: './src/index.ts', // 入口
   output: {
     file: './dist/vue.js', // 出口
     name: 'Vue', // 表示打包后在全局增加 Vue 变量 global.Vue
@@ -33,7 +33,7 @@ export default {
 }
 ```
 
-src/index.js
+src/index.ts
 
 ```javascript
 export const a = 100
@@ -59,7 +59,7 @@ package.json
   "name": "vue2-stage",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
     "dev": "rollup -c rollup.config.js -w"
   },
