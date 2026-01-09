@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+        name="viewport">
+  <meta content="ie=edge" http-equiv="X-UA-Compatible">
+  <title>vue</title>
+</head>
+<body>
+
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.5/vue.global.js"></script>
+<script>
+  const {reactive, shallowReactive, readonly, shallowReadonly} = Vue
+  const state = shallowReactive({name: 'zf', age: {n: 11}})
+  console.log(state)
+
+  state.name = 'zf2'
+  state.age.n = 12
+</script>
+</html>

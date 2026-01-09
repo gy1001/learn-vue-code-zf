@@ -9,6 +9,7 @@
     "module": "ESNext",
     "target": "esnext",
     "strict": false,
+    "sourceMap": true,
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
