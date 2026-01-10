@@ -3,5 +3,8 @@ export {
   readonly,
   reactive,
   shallowReactive,
-  shallowReadonly
-} from "./reactive"
+  shallowReadonly,
+} from "./reactive";
+
+export {effect, track} from "./effect";
+export {TrackOpTypes} from "./operators"

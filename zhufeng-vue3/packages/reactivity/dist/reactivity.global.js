@@ -13,6 +13,15 @@ var VueReactivity = (function (exports) {
       return function get(target, key, receiver) {
           // proxy + reflect
           const res = Reflect.get(target, key, receiver);
+          // 后续 object 上的方法，会被迁移到 Reflect Reflect.getProptypeof()
+          // 以前 target[key] = value 方式 设置值可能会失败，但是并不会报异常，也没有返回值标识
+          // Reflect 方法具备返回值
+          // Reflect 使用可以不使用 proxy es6语法
+          if (!isReadonly) {
+              // 这里要收集依赖，等会数据变化后更新对应的视图
+              console.log("执行 effect 时候会取值，收集 effect");
+              track(target, 0 /* TrackOpTypes.GET */, key);
+          }
           if (shallow) {
               return res;
           }
@@ -31,6 +40,7 @@ var VueReactivity = (function (exports) {
   function createSetter(shallow = false) {
       return function set(target, key, value, receiver) {
           const res = Reflect.set(target, key, value, receiver);
+          // 当数据更新的时候 ，通知对应属性的 effect 重新执行
           return res;
       };
   }
@@ -91,10 +101,90 @@ var VueReactivity = (function (exports) {
       return proxy;
   }
 
+  function effect(fn, options = {}) {
+      // 我们需要让这个 effect 变成响应式的 effect，可以做到数据变化重新执行
+      const effect = createReactiveEffect(fn, options);
+      if (!options.lazy) {
+          effect(); // 响应式的 effect 默认会先执行一次
+      }
+      return effect;
+  }
+  let uid = 0;
+  let activeEffect;
+  let effectStack = []; // 存储当前的 effect,需要是个栈，因为可能会有嵌套的问题
+  /*
+  effect(() => {
+    state.name = "xx"
+    effect(() => {
+       state.age = "xxx"
+    })
+    state.address = "xxx"
+  })
+
+
+   */
+  function createReactiveEffect(fn, options = {}) {
+      const effect = function reactiveEffect() {
+          if (effectStack.includes(effect)) {
+              // 这里可以防止如下代码
+              /**
+               effect(() => { state.age ++  })
+               // 如果没有做判断，就会循环执行
+               */
+              return;
+          }
+          // 后续保证 effect 没有加入到 effectStack 中才进行添加
+          try {
+              // console.log("默认会执行")
+              effectStack.push(effect);
+              activeEffect = effect;
+              return fn(); // 函数取值的时候会取值，执行 get，
+          }
+          finally {
+              effectStack.pop();
+              activeEffect = effectStack[effectStack.length - 1];
+          }
+      };
+      effect.id = uid++; // 制作一个 effect 标识，用于区分 effect
+      effect._isEffect = true; // 用于标识这个是响应式 effect
+      effect.raw = fn; // 保留 effect 对应的原函数
+      effect.options = options; // 在 effect 上保存用户的属性
+      return effect;
+  }
+  const targetMap = new WeakMap();
+  // 让某个对象中的属性收集当前对应的 effect 函数
+  function track(target, type, key) {
+      // 这里就可以拿到 activeEffect: 它是当前正在运行的 effect
+      // console.log(target, key, activeEffect)
+      if (activeEffect === undefined) {
+          // 此属性不用收集依赖，因为没在 effect 中使用
+          return;
+      }
+      let depsMap = targetMap.get(target);
+      if (!depsMap) {
+          targetMap.set(target, (depsMap = new Map()));
+      }
+      let dep = depsMap.get(key);
+      if (!dep) {
+          depsMap.set(key, dep = new Set());
+      }
+      if (!dep.has(activeEffect)) {
+          dep.add(activeEffect);
+      }
+  }
+  // 收集依赖中的结构大概类似如下
+  // 比如 target 是 {name: 'xx', age: 'xx' }
+  // key可能是 name，可能是 age，然后 key 对应的可能是多个 effect，应该是一个 set 类型
+  //{name: 'xx', age: 'xx' } => name => [effect, effect]
+  // 所以这里我们使用 weakMap
+  // weakMap: key => { name:'zf',age: 12} value: map => {name => set}
+
+  exports.effect = effect;
   exports.reactive = reactive;
   exports.readonly = readonly;
   exports.shallowReactive = shallowReactive;
   exports.shallowReadonly = shallowReadonly;
+  exports.track = track;
 
   return exports;
 

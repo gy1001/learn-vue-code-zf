@@ -3,7 +3,7 @@
 // 是不是深度的，
 
 import {extend, isObject} from "@vue/shared";
-import {reactive, readonly} from "@vue/reactivity";
+import {reactive, readonly, track, TrackOpTypes} from "@vue/reactivity";
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target, key, receiver) {
@@ -15,6 +15,8 @@ function createGetter(isReadonly = false, shallow = false) {
     // Reflect 使用可以不使用 proxy es6语法
     if (!isReadonly) {
       // 这里要收集依赖，等会数据变化后更新对应的视图
+      console.log("执行 effect 时候会取值，收集 effect")
+      track(target, TrackOpTypes.GET, key)
     }
     if (shallow) {
       return res
@@ -38,7 +40,7 @@ function createSetter(shallow = false) {
 
   return function set(target, key, value, receiver) {
     const res = Reflect.set(target, key, value, receiver)
-
+    // 当数据更新的时候 ，通知对应属性的 effect 重新执行
     return res
   }
 }
