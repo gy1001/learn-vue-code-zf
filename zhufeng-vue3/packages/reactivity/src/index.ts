@@ -4,7 +4,7 @@ export {
   reactive,
   shallowReactive,
   shallowReadonly,
-} from "./reactive";
+} from './reactive'
 
-export {effect, track} from "./effect";
-export {TrackOpTypes} from "./operators"
+export { effect, track, trigger } from './effect'
+export { TrackOpTypes, TriggerOrTypes } from './operators'

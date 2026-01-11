@@ -17,6 +17,9 @@ importers:
       execa:
         specifier: ^9.6.1
         version: 9.6.1
+      gy-prettier:
+        specifier: ^0.0.4
+        version: 0.0.4
       rollup:
         specifier: ^4.55.1
         version: 4.55.1
@@ -254,6 +257,9 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  gy-prettier@0.0.4:
+    resolution: {integrity: sha512-FMXvuZFhXn8bIN2YeGMAd76yumHG6hYvVsw9Fpn3MiWBXkraaSu8WG3V1vEL4eW3uI9u1CGqFYU7RWlakCbj3Q==}
 
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
@@ -590,6 +596,8 @@ snapshots:
       is-stream: 4.0.1
 
   graceful-fs@4.2.11: {}
+
+  gy-prettier@0.0.4: {}
 
   hasown@2.0.2:
     dependencies:

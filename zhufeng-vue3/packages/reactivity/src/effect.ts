@@ -1,3 +1,6 @@
+import { isArray, isIntergerKey } from '@vue/shared'
+import { TriggerOrTypes } from '@vue/reactivity'
+
 export function effect(fn, options: any = {}) {
   // 我们需要让这个 effect 变成响应式的 effect，可以做到数据变化重新执行
 
@@ -24,7 +27,6 @@ effect(() => {
 
  */
 
-
 function createReactiveEffect(fn, options = {}) {
   const effect = function reactiveEffect() {
     if (effectStack.includes(effect)) {
@@ -41,7 +43,7 @@ function createReactiveEffect(fn, options = {}) {
       // console.log("默认会执行")
       effectStack.push(effect)
       activeEffect = effect
-      return fn()// 函数取值的时候会取值，执行 get，
+      return fn() // 函数取值的时候会取值，执行 get，
     } finally {
       effectStack.pop()
       activeEffect = effectStack[effectStack.length - 1]
@@ -71,7 +73,7 @@ export function track(target, type, key) {
 
   let dep = depsMap.get(key)
   if (!dep) {
-    depsMap.set(key, dep = new Set())
+    depsMap.set(key, (dep = new Set()))
   }
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect)
@@ -84,3 +86,52 @@ export function track(target, type, key) {
 //{name: 'xx', age: 'xx' } => name => [effect, effect]
 // 所以这里我们使用 weakMap
 // weakMap: key => { name:'zf',age: 12} value: map => {name => set}
+
+// 找到对应的 effect 让其执行（数组、对象）
+export function trigger(target, type, key, newValue?, oldValue?) {
+  console.log('trigger', target, type, key, newValue, oldValue)
+
+  // 如果这个属性没有收集过 effect, 那么不需要做任何操作
+  const depsMap = targetMap.get(target)
+  if (!depsMap) {
+    return
+  }
+  // 我要将所有的需要执行的 effect 全部存到一个新的集合中，最终一起执行
+  const effects = new Set() // 这里对 effect 进行了去重
+  const add = (effectsToAdd) => {
+    if (effectsToAdd) {
+      effectsToAdd.forEach((effect) => {
+        effects.add(effect)
+      })
+    }
+  }
+  // 1. 看修改的是否是数组的长度，因为修改长度影响的比较大
+  if (key === 'length' && isArray(target)) {
+    // 如果对应的长度有依赖收集
+    depsMap.forEach((dep, depKey) => {
+      if (depKey === 'length' || depKey > newValue) {
+        // length 改动，缩减了数组的长度
+        add(dep)
+      }
+    })
+  } else {
+    // 可能是对象
+    console.log(key)
+    if (key !== undefined) {
+      // 如果是新增，depsMap.get(key)就获取不到，也没有问题
+      add(depsMap.get(key))
+    }
+    // 如果修改数组中的某一个索引，怎么办？
+    // state.arr[100] = 1
+    // 这里添加一个索引的话，也需要添加 length 的 effect
+    switch (type) {
+      case TriggerOrTypes.ADD:
+        if (isArray(target) && isIntergerKey(key)) {
+          add(depsMap.get('length'))
+        }
+    }
+  }
+  effects.forEach((effect: any) => {
+    effect()
+  })
+}

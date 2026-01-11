@@ -1,7 +1,12 @@
 const isObject = (value) => {
-    return typeof value === "object" && value !== null;
+    return typeof value === 'object' && value !== null;
 };
 const extend = Object.assign;
+const isArray = Array.isArray;
+const isIntergerKey = (key) => parseInt(key) + '' === key;
+let hasOwnProperty = Object.prototype.hasOwnProperty;
+const hasOwn = (target, key) => hasOwnProperty.call(target, key);
+const hasChanged = (oldValue, value) => oldValue !== value;
 
 // 实现 new Proxy(target, handler)
 // 是不是仅读的，仅读的属性 set 时候会报异常
@@ -16,7 +21,7 @@ function createGetter(isReadonly = false, shallow = false) {
         // Reflect 使用可以不使用 proxy es6语法
         if (!isReadonly) {
             // 这里要收集依赖，等会数据变化后更新对应的视图
-            console.log("执行 effect 时候会取值，收集 effect");
+            console.log('执行 effect 时候会取值，收集 effect');
             track(target, 0 /* TrackOpTypes.GET */, key);
         }
         if (shallow) {
@@ -36,8 +41,26 @@ const readonlyGet = createGetter(true, false);
 const shallowReadonlyGet = createGetter(true, true);
 function createSetter(shallow = false) {
     return function set(target, key, value, receiver) {
+        // 先获取老值,在进行 Reflect.set 修改值之前
+        const oldValue = target[key];
+        // 这个判断也需要在 Reflect.set 前面
+        const hadKey = isArray(target) && isIntergerKey(key)
+            ? Number(key) < target.length
+            : hasOwn(target, key);
         const res = Reflect.set(target, key, value, receiver);
         // 当数据更新的时候 ，通知对应属性的 effect 重新执行
+        // 这里我们要区分是新增的，还是修改的
+        // vue2中无法监控更改索引，无法监控数组的长度，因此 vue2中使用了 hack 的方法特殊处理了
+        // vue3中都解决了
+        // 这里判断 target 是数组，同时 key 是索引数字，即修改的是数组的索引
+        if (!hadKey) {
+            // 新增
+            trigger(target, 0 /* TriggerOrTypes.ADD */, key, value);
+        }
+        else if (hasChanged(oldValue, value)) {
+            // 修改
+            trigger(target, 1 /* TriggerOrTypes.SET */, key, value, oldValue);
+        }
         return res;
     };
 }
@@ -45,7 +68,7 @@ const set = createSetter();
 const shallowSet = createSetter(true);
 const mutableHanders = {
     get,
-    set
+    set,
 };
 const shallowReactiveHandlers = {
     get: shallowGet,
@@ -163,7 +186,7 @@ function track(target, type, key) {
     }
     let dep = depsMap.get(key);
     if (!dep) {
-        depsMap.set(key, dep = new Set());
+        depsMap.set(key, (dep = new Set()));
     }
     if (!dep.has(activeEffect)) {
         dep.add(activeEffect);
@@ -175,6 +198,54 @@ function track(target, type, key) {
 //{name: 'xx', age: 'xx' } => name => [effect, effect]
 // 所以这里我们使用 weakMap
 // weakMap: key => { name:'zf',age: 12} value: map => {name => set}
+// 找到对应的 effect 让其执行（数组、对象）
+function trigger(target, type, key, newValue, oldValue) {
+    console.log('trigger', target, type, key, newValue, oldValue);
+    // 如果这个属性没有收集过 effect, 那么不需要做任何操作
+    const depsMap = targetMap.get(target);
+    if (!depsMap) {
+        return;
+    }
+    // 我要将所有的需要执行的 effect 全部存到一个新的集合中，最终一起执行
+    const effects = new Set(); // 这里对 effect 进行了去重
+    const add = (effectsToAdd) => {
+        if (effectsToAdd) {
+            effectsToAdd.forEach((effect) => {
+                effects.add(effect);
+            });
+        }
+    };
+    // 1. 看修改的是否是数组的长度，因为修改长度影响的比较大
+    if (key === 'length' && isArray(target)) {
+        // 如果对应的长度有依赖收集
+        depsMap.forEach((dep, depKey) => {
+            if (depKey === 'length' || depKey > newValue) {
+                // length 改动，缩减了数组的长度
+                add(dep);
+            }
+        });
+    }
+    else {
+        // 可能是对象
+        console.log(key);
+        if (key !== undefined) {
+            // 如果是新增，depsMap.get(key)就获取不到，也没有问题
+            add(depsMap.get(key));
+        }
+        // 如果修改数组中的某一个索引，怎么办？
+        // state.arr[100] = 1
+        // 这里添加一个索引的话，也需要添加 length 的 effect
+        switch (type) {
+            case 0 /* TriggerOrTypes.ADD */:
+                if (isArray(target) && isIntergerKey(key)) {
+                    add(depsMap.get('length'));
+                }
+        }
+    }
+    effects.forEach((effect) => {
+        effect();
+    });
+}
 
-export { effect, reactive, readonly, shallowReactive, shallowReadonly, track };
+export { effect, reactive, readonly, shallowReactive, shallowReadonly, track, trigger };
 //# sourceMappingURL=reactivity.esm-bundler.js.map
