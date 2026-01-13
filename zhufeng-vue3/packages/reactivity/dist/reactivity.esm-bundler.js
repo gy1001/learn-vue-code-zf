@@ -247,5 +247,30 @@ function trigger(target, type, key, newValue, oldValue) {
     });
 }
 
-export { effect, reactive, readonly, shallowReactive, shallowReadonly, track, trigger };
+// value 是一个普通类型
+// ref和 reactive 区别就是 reactive 内部使用了 proxy，而 ref 内部使用的是 defineProperty
+function ref(value) {
+    // 将普通类型变成一个对象
+    // 也可以是对象，但是一般情况下如果是对象直接使用 reactive 更合理
+    return createRef(value);
+}
+class RefImpl {
+    rawValue;
+    shallow;
+    // 表示 声明了一个 value 属性，但是没有赋值
+    _value;
+    __v_isRef = true; // 产生的实例会被添加到 __v_isRef 表示是一个 ref 属性
+    constructor(
+    // 参数中前面增加修饰符，标识此属性放到了实例上
+    rawValue, shallow) {
+        this.rawValue = rawValue;
+        this.shallow = shallow;
+    }
+}
+// 后续看 vue 的源码，基本上都是高阶函数，做了类似柯里化的功能
+function createRef(rawValue, shallow = false) {
+    return new RefImpl(rawValue, shallow);
+}
+
+export { effect, reactive, readonly, ref, shallowReactive, shallowReadonly, track, trigger };
 //# sourceMappingURL=reactivity.esm-bundler.js.map
