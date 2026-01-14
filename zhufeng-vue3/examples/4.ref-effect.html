@@ -12,23 +12,15 @@
 </body>
 <script src="../packages/reactivity/dist/reactivity.global.js"></script>
 <script>
-  const {effect, reactive} = VueReactivity
-  const state = reactive({name: 'zf', age: 200, arr: [1, 2, 3]})
+  const {ref, effect} = VueReactivity
+  const state = ref({name: 'zf', a: {n: '11'}})
+  console.log(state.value.name)
+  console.log(state.value.a) // 这里仍然是响应式的 Proxy
   effect(() => {
-    console.log("effect 执行了")
-    // app.innerHTML = state.arr.length
-    // app.innerHTML = state.arr[2]
-    app.innerHTML = state.arr[2] + state.arr.length
-
-    // app.innerHTML = "珠峰今年" + state.name + "," + state.age + "岁了"
+    app.innerHTML = state.value.name
   })
   setTimeout(() => {
-    // state.AAAA = "猪八戒" // 更改 name 属性，那就需要重新执行 effect 里面的函数
-    // state.arr.push(4)
-    // state.arr[2] = 4
-    state.arr[100] = 4
-    // state.arr.length = 1
-    // state.arr.length = 3
+    state.value.name = "猪八戒"
   }, 1000)
 </script>
 </html>

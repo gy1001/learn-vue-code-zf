@@ -257,17 +257,33 @@ var VueReactivity = (function (exports) {
       // 也可以是对象，但是一般情况下如果是对象直接使用 reactive 更合理
       return createRef(value);
   }
+  const convert = (value) => (isObject(value) ? reactive(value) : value);
+  // beta 之前的版本中 ref 就是一个对象，由于对象不方便扩展，后面改为了类 class
   class RefImpl {
       rawValue;
       shallow;
-      // 表示 声明了一个 value 属性，但是没有赋值
-      _value;
       __v_isRef = true; // 产生的实例会被添加到 __v_isRef 表示是一个 ref 属性
       constructor(
       // 参数中前面增加修饰符，标识此属性放到了实例上
       rawValue, shallow) {
           this.rawValue = rawValue;
           this.shallow = shallow;
+          // 如果是深度，就需要把里面的都变成响应式的
+          this._value = shallow ? rawValue : convert(rawValue);
+      }
+      // 表示 声明了一个 _value 属性，但是没有赋值
+      _value;
+      get value() {
+          track(this, 0 /* TrackOpTypes.GET */, 'value');
+          return this._value;
+      }
+      set value(newValue) {
+          if (hasChanged(newValue, this.rawValue)) {
+              // 判断新值 老值 有变化
+              this.rawValue = newValue; // 新值作为原始值
+              this._value = this.shallow ? newValue : convert(newValue);
+              trigger(this, 1 /* TriggerOrTypes.SET */, 'value', newValue);
+          }
       }
   }
   // 后续看 vue 的源码，基本上都是高阶函数，做了类似柯里化的功能
