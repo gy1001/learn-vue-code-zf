@@ -290,6 +290,33 @@ var VueReactivity = (function (exports) {
   function createRef(rawValue, shallow = false) {
       return new RefImpl(rawValue, shallow);
   }
+  class ObjectRefImpl {
+      target;
+      key;
+      __v_isRef = true;
+      constructor(target, key) {
+          this.target = target;
+          this.key = key;
+      }
+      get value() {
+          return this.target[this.key];
+      }
+      set value(newValue) {
+          this.target[this.key] = newValue;
+      }
+  }
+  // 可以把一个对象的值转换为一个 ref 类型的
+  function toRef(target, key) {
+      return new ObjectRefImpl(target, key);
+  }
+  function toRefs(object) {
+      // object 可能是一个对象，也可能是一个数组
+      const result = isArray(object) ? new Array(object.length) : {};
+      for (const key in object) {
+          result[key] = toRef(object, key);
+      }
+      return result;
+  }
 
   exports.effect = effect;
   exports.reactive = reactive;
@@ -297,6 +324,8 @@ var VueReactivity = (function (exports) {
   exports.ref = ref;
   exports.shallowReactive = shallowReactive;
   exports.shallowReadonly = shallowReadonly;
+  exports.toRef = toRef;
+  exports.toRefs = toRefs;
   exports.track = track;
   exports.trigger = trigger;
 

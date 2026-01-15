@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    name="viewport"
+  />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible"/>
+  <title>05-toRef</title>
+</head>
+<body>
+<div id="app"></div>
+</body>
+<script src="../packages/reactivity/dist/reactivity.global.js"></script>
+<script>
+  const {toRef, reactive, effect} = VueReactivity
+  const proxy = reactive({name: 'zf', age: 200})
+  console.log(proxy.name)
+  console.log(toRef(proxy, 'name'))
+  let r1 = toRef(proxy, 'name')
+  let r2 = toRef(proxy, 'age')
+  effect(() => {
+    app.innerHTML = r1.value + r2.value
+  })
+  setTimeout(() => {
+    r1.value = '猪八戒'
+  }, 1000)
+</script>
+</html>

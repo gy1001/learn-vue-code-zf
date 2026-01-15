@@ -7,7 +7,7 @@ import {
   trigger,
   TriggerOrTypes,
 } from '@vue/reactivity'
-import { hasChanged, isObject } from '@vue/shared'
+import { hasChanged, isArray, isObject } from '@vue/shared'
 
 export function ref(value) {
   // 将普通类型变成一个对象
@@ -55,4 +55,35 @@ class RefImpl {
 // 后续看 vue 的源码，基本上都是高阶函数，做了类似柯里化的功能
 function createRef(rawValue, shallow = false) {
   return new RefImpl(rawValue, shallow)
+}
+
+class ObjectRefImpl {
+  public __v_isRef = true
+
+  constructor(
+    public target,
+    public key,
+  ) {}
+
+  get value() {
+    return this.target[this.key]
+  }
+
+  set value(newValue) {
+    this.target[this.key] = newValue
+  }
+}
+
+// 可以把一个对象的值转换为一个 ref 类型的
+export function toRef(target, key) {
+  return new ObjectRefImpl(target, key)
+}
+
+export function toRefs(object) {
+  // object 可能是一个对象，也可能是一个数组
+  const result = isArray(object) ? new Array(object.length) : {}
+  for (const key in object) {
+    result[key] = toRef(object, key)
+  }
+  return result
 }
